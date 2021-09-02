@@ -1,0 +1,132 @@
+Protein Group,Protein ID,Accession,Condition 1 Significance,-10lgP,Condition 1_Area:female,Condition 1_Area:male,Condition 2_Area:female,Condition 2_Area:male,Condition 1_Ratio:female,Condition 1_Ratio:male,Condition 1_Ratio:Group 1,Coverage (%),Peptides,Unique,PTM,Avg. Mass,Description
+1,3,FBgn0264695,200.00,312.23,6.2428E8,3.7669E7,2.9431E9,3.7934E9,0.02,0,0.01,27,49,49,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,224267,FBpp0298828
+5,16,FBgn0087002,200.00,282.75,8.7038E6,0,1.9828E8,1.6595E8,0,0,0,11,29,29,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,372678,FBpp0088252
+24,441,FBgn0005666,167.00,240.00,0,0,1.9772E7,2.0695E7,0,0,0,2,12,12,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,1000102,FBpp0290554
+2,12,FBgn0010217,76.10,232.59,9.7508E7,0,1.1807E9,5.2687E8,0,0,0,32,11,11,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),54683,FBpp0305828
+12,13,FBgn0004507,59.89,231.90,7.8603E6,2.6051E5,2.323E8,1.4117E8,0,0,0,21,15,15,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,96997,FBpp0077501
+6,5,FBgn0000639,39.25,228.83,5.2245E8,0,1.563E9,0,0.37,-,0.37,21,15,15,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,119663,FBpp0075491
+13,18,FBgn0000667,105.93,226.80,2.0094E6,1.6073E6,6.425E7,1.4612E8,0,0,0,16,14,14,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,106373,FBpp0070331
+3,7,FBgn0000055,51.65,226.73,8.9784E7,1.9034E5,6.2656E8,4.4704E8,0,0,0,49,7,7,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),27734,FBpp0100045
+4,6,FBgn0011211,90.06,224.34,6.9322E6,3.8943E6,4.4899E8,5.7681E8,0,0,0,24,10,10,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),59422,FBpp0071794
+25,51,FBgn0002564,47.98,219.13,5.1513E6,0,1.2768E8,0,0,-,0,16,11,11,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,93408,FBpp0072365
+17,34,FBgn0266599,58.86,216.99,1.9723E7,5.4244E7,2.4478E8,2.0674E7,0,0,0,13,9,7,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,71132,FBpp0082514
+16,852,FBgn0283427,130.95,213.68,1.1703E5,1.0677E6,3.6988E7,3.3503E7,0,0,0,7,17,16,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,277997,FBpp0307371
+34,22,FBgn0001233,26.23,204.87,3.2959E6,0,1.0831E8,9.4604E7,0,0,0,14,9,8,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,81865,FBpp0072904
+14,54,FBgn0000116,32.45,200.49,3.3185E7,0,6.8981E7,2.4495E8,0,0,0,19,10,10,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,61264,FBpp0076270
+38,33,FBgn0015245,41.54,199.29,2.9314E6,0,4.1655E7,1.4004E7,0,0,0,16,8,8,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,60809,FBpp0073290
+26,52,FBgn0003360,41.15,198.81,7.7767E7,1.7416E8,1.1692E8,2.6842E8,0,0,0,28,10,10,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),34215,FBpp0073278
+19,19,FBgn0010100,28.97,195.90,1.4108E7,2.1565E6,1.2235E8,4.1629E7,0,0,0,19,11,11,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,85398,FBpp0081002
+21,23,FBgn0250814,88.50,195.81,4.9042E7,3.2097E5,2.947E8,1.9649E8,0,0,0,35,10,10,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,45415,FBpp0075069
+15,38,FBgn0263006,43.61,195.52,1.4391E7,1.5751E7,7.5134E7,2.9859E8,0.05,0.01,0.03,12,10,10,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,111701,FBpp0072121
+37,361,FBgn0003149,58.07,191.35,1.8954E6,0,1.0578E7,1.0099E8,0.10,0,0.05,12,9,9,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,102338,FBpp0076321
+76,815,FBgn0053519,34.14,191.11,0,2.8574E4,1.6798E6,4.1167E6,0,0,0,2,7,7,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,475660,FBpp0112375
+30,35,FBgn0004363,78.99,189.72,3.471E7,3.515E7,2.3464E8,4.3542E8,0,0,0,44,10,10,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,30550,FBpp0079771
+18,25,FBgn0027291,120.11,189.42,3.8949E5,0,7.5122E7,1.5261E8,0,0,0,27,8,8,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,40844,FBpp0307649
+27,37,FBgn0002565,133.00,187.64,0,0,8.8071E7,9.5596E7,0,0,0,15,8,8,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,83349,FBpp0088363
+69,798,FBgn0250789,38.85,185.97,0,0,2.787E6,2.4291E6,0,0,0,2,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,282565,FBpp0305100
+41,100,FBgn0001128,25.76,185.93,6.0754E7,0,3.2243E8,1.6878E8,0.14,0,0.07,28,8,8,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,39329,FBpp0078777
+72,5852,FBgn0024957,47.24,185.02,3.5105E6,0,2.692E7,5.7525E6,0,0,0,13,9,9,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,98578,FBpp0081736
+40,59,FBgn0001248,44.44,184.73,1.295E7,1.0547E7,8.2454E7,6.0049E7,0,0,0,24,9,9,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5),53643,FBpp0305272
+29,27,FBgn0000579,28.82,184.38,4.1245E7,2.5164E6,1.998E8,6.6674E7,0,0,0,21,7,7,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,54310,FBpp0077571
+32,44,FBgn0261955,26.70,183.70,5.9636E6,0,7.9743E7,1.9613E8,0.04,0,0.02,12,5,5,Carbamidomethylation; Oxidation (M); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,58217,FBpp0070871
+46,4555,FBgn0027560,138.24,182.00,0,0,3.1506E7,2.9865E7,0,0,0,10,8,8,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,91135,FBpp0077121
+50,58,FBgn0038271,44.12,177.17,0,0,4.9498E7,7.8581E7,0,0,0,9,3,3,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,51874,FBpp0082459
+36,30,FBgn0022160,38.47,176.97,4.5972E6,2.1699E6,8.3388E7,5.2566E7,0,0,0,13,8,8,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,80422,FBpp0086442
+70,1005,FBgn0002563,61.38,176.83,0,0,2.9373E7,0,0,-,0,6,7,5,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,95914,FBpp0077690
+61,36,FBgn0286818,39.06,176.29,1.5836E6,0,8.6306E7,1.4904E7,0,0,0,12,5,5,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,55781,FBpp0075401
+80,169,FBgn0003071,121.42,174.49,0,0,1.5222E7,1.1769E7,0,0,0,15,10,10,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,105187,FBpp0087506
+53,219,FBgn0000559,34.72,173.81,1.6192E6,0,4.6759E7,1.8136E7,0,0,0,11,8,8,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,94459,FBpp0085265
+48,145,FBgn0010352,60.63,173.71,0,1.7089E7,1.4929E6,6.8617E7,0,0,0,11,12,12,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,122896,FBpp0111773
+68,734,FBgn0265991,58.24,171.92,0,2.1647E5,4.0111E7,1.9427E7,0,0,0,4,7,7,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),238061,FBpp0099801
+45,98,FBgn0263598,54.52,170.28,0,0,1.9154E7,1.1948E7,0,0,0,7,6,4,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,68302,FBpp0079999
+60,40,FBgn0016691,56.35,169.80,0,0,6.3994E7,2.8456E7,0,0,0,29,5,5,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,22422,FBpp0082522
+87,112,FBgn0001220,146.51,169.68,0,0,3.009E7,5.8726E7,0,0,0,10,6,6,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,74066,FBpp0086694
+65,109,FBgn0286508,63.27,169.05,1.785E6,0,6.207E7,1.2435E8,0,0,0,30,8,8,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,34786,FBpp0074019
+73,1391,FBgn0284408,47.37,168.91,0,0,6.2544E6,6.7064E6,0,0,0,1,4,4,Deamidation (NQ); 13C(6) 15N(4) Silac label,496948,FBpp0309655
+39,157,FBgn0027580,39.87,166.92,7.5774E6,7.6028E5,4.9592E7,1.7972E7,0,0,0,7,7,7,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,132674,FBpp0087539
+67,83,FBgn0001098,47.92,164.09,1.0664E6,0,3.0917E7,6.1349E7,0,0,0,18,9,9,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),62536,FBpp0088988
+96,4604,FBgn0033879,30.02,163.94,0,6.4996E5,1.5406E7,3.7309E7,0,0,0,28,6,6,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,31582,FBpp0086770
+71,817,FBgn0003074,102.72,162.74,0,0,2.7403E7,1.9066E7,0,0,0,18,7,7,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,62339,FBpp0087760
+51,88,FBgn0012036,126.27,161.26,0,0,4.2179E7,1.0798E8,0,0,0,16,7,7,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,57019,FBpp0079406
+74,195,FBgn0022355,23.50,161.23,3.7584E5,3.4556E6,7.9646E6,4.3012E7,0.21,0,0.11,12,7,7,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,71812,FBpp0074331
+90,1408,FBgn0267385,51.89,161.17,0,0,0,3.1064E7,-,0,0,8,4,4,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,57440,FBpp0083611
+47,20,FBgn0039737,48.15,160.74,2.1511E6,0,7.7236E7,5.9183E7,0,0,0,17,7,7,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,51855,FBpp0084968
+85,189,FBgn0001218,31.68,159.41,2.791E6,0,1.5659E7,2.6447E7,0,0,0,8,5,4,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,72261,FBpp0073445
+49,85,FBgn0020235,24.25,158.38,1.65E7,0,8.9439E7,1.4456E8,0,0,0,27,7,7,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,32871,FBpp0084905
+84,148,FBgn0039635,48.75,157.90,0,1.5323E5,4.1122E7,3.9077E7,0,0,0,23,7,7,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,39351,FBpp0084735
+64,47,FBgn0005391,24.17,157.34,1.9178E7,0,2.5636E8,0,0,-,0,21,5,5,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),49660,FBpp0071359
+119,6145,FBgn0034432,105.12,155.64,0,0,4.6351E6,7.1255E6,0,0,0,10,6,6,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,68368,FBpp0289511
+81,4031,FBgn0004047,101.78,153.55,0,0,2.3702E8,0,0,-,0,25,7,7,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,46101,FBpp0073652
+211,11298,FBgn0036969,40.54,152.79,0,0,0,4.1204E7,-,0,0,10,4,3,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,40993,FBpp0074612
+44,176,FBgn0010226,26.22,151.32,8.3957E6,1.4478E7,3.4976E7,1.2155E8,0,0,0,30,5,5,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label,27781,FBpp0305731
+83,268,FBgn0017545,46.08,151.27,0,0,5.8052E7,1.0449E7,0,0,0,12,3,3,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,30340,FBpp0088242
+57,57,FBgn0037643,29.30,151.01,1.4158E6,3.1762E5,2.1096E7,1.0035E8,0.04,0,0.02,14,6,6,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,54911,FBpp0291000
+112,41012,FBgn0011284,100.27,150.81,0,0,3.9939E7,1.3089E7,0,0,0,23,6,6,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,29134,FBpp0075618
+75,12261,FBgn0002921,75.53,150.71,0,0,8.0473E6,3.34E7,0,0,0,7,5,5,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,115605,FBpp0088502
+98,123,FBgn0036824,126.27,150.59,0,0,3.9064E7,5.7218E7,0,0,0,9,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,45366,FBpp0074843
+100,2419,FBgn0034497,57.09,149.77,0,0,3.0497E6,7.5403E7,0,0,0,13,5,5,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,40553,FBpp0085615
+168,41013,FBgn0036213,22.78,148.13,0,0,2.3081E6,6.7249E4,0,0,0,23,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label,24274,FBpp0075764
+77,1354,FBgn0017566,35.64,147.70,7.0405E5,0,1.9251E7,3.2892E7,0,0,0,13,6,6,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,78630,FBpp0071128
+133,168,FBgn0035811,69.04,147.19,0,0,0,3.1316E7,-,0,0,5,2,2,Deamidation (NQ); 13C(6) 15N(4) Silac label,45872,FBpp0076520
+135,10698,FBgn0026415,36.00,146.90,0,0,1.3185E7,1.239E7,0,0,0,5,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,48604,FBpp0071328
+161,9759,FBgn0266064,53.36,146.72,0,0,6.755E5,1.3031E7,0,0,0,6,4,4,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,81754,FBpp0082496
+138,5645,FBgn0026418,42.53,143.52,0,0,1.8965E6,2.1615E5,0,0,0,7,4,4,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,91903,FBpp0292999
+216,232,FBgn0003462,49.36,141.90,0,0,1.775E7,3.2498E7,0,0,0,18,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,15699,FBpp0075958
+66,45,FBgn0020908,22.47,141.58,0,0,6.3489E6,4.8177E6,0,0,0,15,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,21647,FBpp0112436
+186,2454,FBgn0051075,35.78,141.43,0,0,1.3551E7,2.7383E5,0,0,0,11,4,4,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,55455,FBpp0300161
+171,327,FBgn0030731,73.80,141.34,0,0,4.824E6,1.7542E6,0,0,0,8,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,64073,FBpp0073988
+180,2744,FBgn0031771,95.97,140.82,0,0,1.3337E7,2.0749E7,0,0,0,12,5,5,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,51831,FBpp0078847
+122,12943,FBgn0032350,46.75,140.60,0,0,6.6833E6,4.6419E6,0,0,0,14,4,4,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,35235,FBpp0079809
+156,7461,FBgn0030733,55.63,137.77,0,0,1.4242E7,6.8005E6,0,0,0,37,4,4,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,13568,FBpp0073995
+94,1316,FBgn0003517,82.51,137.66,0,0,1.0122E8,8.4233E6,0,0,0,19,4,4,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,30228,FBpp0070277
+33,99,FBgn0003721,25.98,137.27,9.6926E7,0,2.9612E7,4.4245E7,0,0,0,7,5,5,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,80053,FBpp0088904
+93,46,FBgn0000100,40.66,137.20,7.5589E5,0,2.3379E7,1.3133E7,0,0,0,16,5,5,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; R to P (13C5-15N1),34202,FBpp0078134
+179,9897,FBgn0030086,35.04,134.96,0,0,2.8002E7,0,0,-,0,12,4,4,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(4) Silac label,58064,FBpp0071226
+113,3942,FBgn0040064,27.71,134.55,0,0,1.2037E6,1.5836E7,0,0,0,9,3,3,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,41610,FBpp0079472
+107,135,FBgn0005671,39.41,134.07,0,0,0,3.4868E7,-,0,0,7,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,54549,FBpp0082139
+120,41009,FBgn0037138,34.68,133.47,0,0,5.9115E6,2.0885E7,0,0,0,6,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,63667,FBpp0078099
+146,105,FBgn0017579,38.98,132.25,0,0,3.3731E7,7.8918E6,0,0,0,27,4,4,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),19174,FBpp0076359
+103,3643,FBgn0035978,92.30,130.90,0,0,1.6221E7,1.0648E7,0,0,0,6,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,58753,FBpp0099884
+151,10054,FBgn0002719,58.30,129.77,0,0,4.066E6,1.2006E7,0,0,0,5,4,4,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,84626,FBpp0082129
+78,50,FBgn0284248,26.95,129.09,1.5549E6,0,6.7736E7,1.0922E8,0,0,0,24,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,11735,FBpp0080446
+118,5827,FBgn0283471,36.00,127.31,0,5.3416E4,4.7036E7,3.097E7,0,0.01,0.01,19,5,5,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,30082,FBpp0074298
+136,937,FBgn0010408,54.02,127.09,0,0,3.2203E7,1.2645E7,0,0,0,19,5,5,Oxidation (M); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,22623,FBpp0076152
+150,1668,FBgn0003076,48.99,125.89,0,0,1.2551E7,1.4505E6,0,0,0,6,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,60766,FBpp0075247
+157,9851,FBgn0037001,25.41,124.78,0,0,0,1.8403E7,-,0,0,7,3,3,Deamidation (NQ); 13C(6) 15N(4) Silac label,46822,FBpp0077859
+154,2839,FBgn0029155,42.34,124.72,0,0,2.6551E6,4.3947E6,0,0,0,4,2,2,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label,69489,FBpp0290922
+124,1152,FBgn0030478,82.09,124.08,0,0,4.0775E6,7.9537E6,0,0,0,7,4,4,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,64047,FBpp0073600
+99,7153,FBgn0283535,91.39,123.96,0,0,4.458E7,5.6998E7,0,0,0,16,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,26082,FBpp0078349
+101,826,FBgn0283658,66.55,123.83,0,0,1.6755E7,4.1932E7,0,0,0,11,5,5,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label; R to P (13C5-15N1),54252,FBpp0079072
+149,224,FBgn0003279,25.83,123.56,0,0,1.3341E7,7.1651E5,0,0,0,4,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,45026,FBpp0084617
+164,7148,FBgn0014026,65.94,122.94,0,0,8.4496E6,1.3015E7,0,0,0,17,5,5,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label,30732,FBpp0070877
+193,1870,FBgn0013763,29.61,122.07,0,0,4.9288E6,3.0949E6,0,0,0,8,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label,50354,FBpp0086257
+91,142,FBgn0005633,24.48,117.03,5.977E6,0,9.6917E7,8.5672E7,0.05,0,0.02,23,4,4,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,20656,FBpp0074679
+144,5383,FBgn0029823,22.61,116.14,0,2.8072E6,1.7623E7,1.1634E7,0,0,0,8,5,5,Deamidation (NQ); 13C(6) 15N(4) Silac label,58801,FBpp0070792
+102,953,FBgn0028325,30.54,112.95,0,0,4.7913E5,1.9477E7,0,0,0,7,2,2,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,48876,FBpp0070679
+187,41028,FBgn0019957,30.82,112.07,0,0,3.4152E6,5.6292E5,0,0,0,7,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,46898,FBpp0083570
+177,6809,FBgn0001145,75.15,112.02,0,0,1.7833E7,8.0125E6,0,0,0,10,3,3,Carbamidomethylation; Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,41731,FBpp0310162
+148,154,FBgn0002622,45.41,111.91,0,0,2.5968E7,0,0,-,0,11,4,4,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,27471,FBpp0083802
+169,1867,FBgn0011559,24.28,111.55,0,0,0,2.0353E7,-,0,0,2,2,2,Deamidation (NQ); 13C(6) 15N(4) Silac label,101921,FBpp0080607
+199,138,FBgn0010198,31.47,111.53,0,0,1.14E7,1.0093E7,0,0,0,13,2,2,Oxidation (M); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,14771,FBpp0073623
+194,7239,FBgn0038277,27.95,109.10,0,0,4.4864E6,0,0,-,0,10,3,3,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(4) Silac label,25716,FBpp0082465
+286,4393,FBgn0037912,24.50,108.89,0,0,1.2224E6,1.0466E6,0,0,0,5,2,2,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,34094,FBpp0099888
+183,9297,FBgn0031913,41.91,108.30,0,0,7.1409E6,1.6959E6,0,0,0,11,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,33936,FBpp0079090
+265,41030,FBgn0028737,30.48,107.61,0,0,7.0271E5,6.7667E5,0,0,0,14,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label,24247,FBpp0305165
+227,7212,FBgn0002031,31.97,107.34,0,0,1.8781E7,3.351E6,0,0,0,9,2,2,Deamidation (NQ); 13C(6) 15N(4) Silac label,30384,FBpp0080707
+279,12542,FBgn0028646,32.86,105.39,0,0,0,9.0436E5,-,0,0,4,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,78333,FBpp0297541
+222,4562,FBgn0015221,31.25,103.19,0,0,2.1376E7,3.2862E6,0,0,0,12,3,3,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,26195,FBpp0304478
+252,8899,FBgn0027779,30.30,101.44,0,0,7.656E6,4.2439E6,0,0,0,6,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,62072,FBpp0080495
+108,153,FBgn0032833,31.86,98.32,0,0,0,1.2739E8,-,0,0,24,3,3,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,20520,FBpp0080835
+240,5644,FBgn0038973,30.53,98.10,0,0,1.6727E7,0,0,-,0,24,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label,19608,FBpp0083648
+226,41114,FBgn0002579,37.47,97.50,0,0,1.3145E7,3.7169E6,0,0,0,17,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,13502,FBpp0070150
+242,129,FBgn0033027,34.92,95.31,0,0,1.9544E7,3.0472E7,0,0,0,22,3,3,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,17000,FBpp0085411
+268,11949,FBgn0039857,36.26,90.67,0,0,2.8364E7,6.712E6,0,0,0,9,2,2,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,29736,FBpp0085166
+237,164,FBgn0037913,33.14,88.27,0,0,8.4837E6,5.083E7,0,0,0,11,2,2,13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,17137,FBpp0099728
+204,103,FBgn0010411,29.81,87.70,0,0,3.1546E6,3.3135E6,0,0,0,16,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label,17612,FBpp0085585
+395,41043,FBgn0015222,28.79,87.29,0,0,2.1172E7,1.733E7,0,0,0,17,3,3,Oxidation (M); Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,27896,FBpp0304479
+404,41026,FBgn0028987,28.49,83.15,0,0,0,1.4252E7,-,0,0,6,2,2,13C(6) 15N(4) Silac label,42564,FBpp0079243
+258,7165,FBgn0015808,31.56,78.09,0,0,1.2526E7,1.8743E6,0,0,0,4,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label,59008,FBpp0080659
+340,8892,FBgn0030718,35.36,73.54,0,0,2.7141E6,9.4295E6,0,0,0,10,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,24594,FBpp0073950
+377,41072,FBgn0287423,29.66,72.85,0,0,0,7.2066E7,-,0,0,29,3,3,Deamidation (NQ); 13C(6) 15N(2) Silac label,13163,FBpp0312403
+487,7933,FBgn0014863,25.19,62.02,0,0,2.7682E6,1.5085E5,0,0,0,6,2,2,Carbamidomethylation; Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,53526,FBpp0081133
+437,13325,FBgn0034645,31.61,59.27,0,0,1.5843E7,3.8958E6,0,0,0,16,2,2,Deamidation (NQ); 13C(6) 15N(2) Silac label; 13C(6) 15N(4) Silac label,12091,FBpp0071580

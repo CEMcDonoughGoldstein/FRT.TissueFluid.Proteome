@@ -1,0 +1,1616 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+Load programs/ libraries
+```{r}
+library(dplyr)
+library(tidyr)
+library(gplots)
+library(RColorBrewer)
+library(psych)
+library(tibble)
+
+library(ggbiplot)
+library(geneplotter)
+library(ggplot2)
+library(UpSetR)
+library(ggrepel)
+library(eulerr)
+library(gridExtra)
+
+library(limma)
+library(MSnbase)
+
+library(car)
+library(boot)
+
+library(pheatmap)
+
+#BiocManager::install("clusterProfiler")
+library(clusterProfiler)
+#BiocManager::install("org.Dm.eg.db")
+library(org.Dm.eg.db)
+
+#BiocManager::install("coRdon")
+library(coRdon)
+
+#install.packages("seqinr")
+library(seqinr)
+
+#BiocManager::install("Biostrings")
+library(Biostrings)
+
+
+
+fromList <- function (input) {
+  # Same as original fromList()...
+  elements <- unique(unlist(input))
+  data <- unlist(lapply(input, function(x) {
+      x <- as.vector(match(elements, x))
+      }))
+  data[is.na(data)] <- as.integer(0)
+  data[data != 0] <- as.integer(1)
+  data <- data.frame(matrix(data, ncol = length(input), byrow = F))
+  data <- data[which(rowSums(data) != 0), ]
+  names(data) <- names(input)
+  # ... Except now it conserves your original value names!
+  row.names(data) <- elements
+  return(data)
+}
+
+#theme_set(theme_bw(base_size = 15))
+
+#calculates standard error
+#https://www.r-bloggers.com/grouped-means-again/
+st.err <- function(x, na.rm=FALSE) {
+     if(na.rm==TRUE) x <- na.omit(x)
+     sd(x)/sqrt(length(x))
+}
+
+#https://stackoverflow.com/questions/5587676/pull-out-p-values-and-r-squared-from-a-linear-regression
+lmp <- function (modelobject) {
+    if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+    f <- summary(modelobject)$fstatistic
+    p <- pf(f[1],f[2],f[3],lower.tail=F)
+    attributes(p) <- NULL
+    return(p)
+}
+
+#set FRT tissue colors
+po.col <- rgb(197,163,199, maxColorValue = 255)
+st.col <- rgb(88,37,131, maxColorValue = 255)
+fb.col <- rgb(255,239,245, maxColorValue = 255)
+bur.col <- rgb(0,130,99, maxColorValue = 255)
+sr.col <- rgb(64,142,222, maxColorValue = 255)
+ovd.col <- rgb(106,203,186, maxColorValue = 255)
+
+```
+
+Read in associated data
+```{r}
+#conversion FBgn to gene name
+#file to large download from flybase
+prot.convert <- read.table("fbgn_NAseq_Uniprot_fb_2020_01.tsv", fill=T, header=T) #this release is paired with r6.32 on flybase)
+prot.convert <- subset(prot.convert, prot.convert$organism_abbreviation == "Dmel")
+prot.convert <- prot.convert[,c(3,1)]
+prot.convert <- prot.convert[!duplicated(prot.convert[,c(1:2)]),]
+
+#mel genes with a signal sequence
+signal <- read.table("signal.txt", header=T, stringsAsFactors = FALSE)
+
+#mel genes in exosome/ vesicles
+exocarta.fbgn <- read.table("ExoCarta.FBgn.tsv", header=F)
+vesicles.fbgn <- read.table("Vesicles.FBgn.tsv", header=F)
+exo.vesicles <- read.table("ExocartaVesicles.txt", header=T)
+
+
+#SFPs (Wigby et al. 2020)
+SFP <- read.table("WigbyBrown2020.HighConfSFP.txt", header=F, sep=",")
+colnames(SFP) <- "SFP"
+
+#FRT transcriptome data (McDonough-Goldstein et al. 2021)
+FRT.summary <- read.table("FRT.summary.txt", header=T)
+Avg.CPM <- read.table("FRT.Avg.CPM.txt")
+
+#load files for GO analysis
+aux_IDs = read.csv("fbgn_auxiliary_ids.txt", header = T, sep ="\t", na.string = "")
+annotation = read.csv("fbgn_annotation_ID_fb_2018_02.tsv", header = T, sep ="\t", na.string = "")
+
+#read in length data
+length <- read.table("dmel-r6.32-headersep.length.txt")
+
+# read in codon sequences
+#file too large download from flybase
+dmel.6.32 <- read.fasta("dmel-all-CDS-r6.32.fasta")
+
+#read in name conversion fbgn - fbpp - fbtr etc.
+#download from flybase
+dmel.names <- read.delim("fbgn_fbtr_fbpp_expanded_fb_2021_04 (1).tsv", fill=T, sep="\t")
+```
+
+Determine the efficiency of the isotopic labelling.
+These are whole body male and female samples
+Efficiency was calculated based on the number of peptides that had isotopic label markers which is around ~91%
+so a ~9% chance that a male peptide which is unlabeled is in our data
+```{r}
+
+efficiency.var <- read.table("Heavy.Label.Check_QUANTITATION_35_proteins.csv", sep=",", header=T) 
+
+efficiency.var <- subset(efficiency.var, efficiency.var$Unique >=2 & efficiency.var$Peptides >=2) #131
+
+efficiency.var.labeled <- efficiency.var[grep("Silac label", efficiency.var$PTM), ] #651
+
+efficiency.var.labeled.both <- efficiency.var[grep("Silac label; 13C", efficiency.var$PTM), ] #498
+111/131 #84.4%
+
+efficiency.var.pep <- read.table("Heavy.Label.Check_PEAKS_34_peptide.csv", sep=",", header=T) #3097
+
+efficiency.var.peptides <- as.character(efficiency.var.pep$Peptide)
+efficiency.var.peptides[duplicated(efficiency.var.peptides)]
+length(which(duplicated(efficiency.var.peptides)))
+
+efficiency.var.pep.labeled <- efficiency.var.pep[grep("Silac label", efficiency.var.pep$PTM), ] #5507
+5507/6493 #84.8
+
+eff.psm <- read.table("Heavy.Label.Check_PEAKS_34_DB search psm.csv", header=T, sep=",")
+
+eff.psm %>% filter (grepl("Silac label", PTM)) %>% tally() #5140/5628
+eff.psm %>% filter (grepl("Silac label", PTM)) %>% tally() / 
+eff.psm %>% tally() #91.3%
+
+
+```
+
+Read in abundance data from DB search (-log10p peptides >= 30 (FDR < 0.05), Ascore>= 100, De novo only score >= 50, Proteins -10logp >= 20 and >= 2unique peptides with significant peptides )
+
+Subset data for proteins have: minimum 2 spectral hits in all Tissue or Fluid sample replicates and area greater than 0 in all Tissue or Fluid sample replicates
+```{r}
+frtfluid.spider<- read.table("FRT_Fluid_NoLabel_r32_PEAKS_99_P30_2uniqueSig_DB_proteins.csv", header=T, fill=T, sep=",") #2848
+
+#Take just the first item of protein groups
+frtfluid.spider <- frtfluid.spider[!duplicated(frtfluid.spider$Protein.Group),] #2760
+
+frtfluid.spider <- right_join(prot.convert, frtfluid.spider, by=c("primary_FBgn" = "Accession"))
+
+#Identify proteins expressed in the TISSUES
+Tissue.proteins <- as.character(unique(subset(frtfluid.spider$primary_FBgn, rowSums(frtfluid.spider[,c(25:28)] >= 2) == 4 & frtfluid.spider$Area.FRT_U1 > 0 & frtfluid.spider$Area.FRT_U2 &frtfluid.spider$Area.FRT_PM1 > 0 & frtfluid.spider$Area.FRT_PM2 > 0))) #1808
+
+#Identify proteins expressed in the FLUID
+Fluid.proteins <- as.character(unique(subset(frtfluid.spider$primary_FBgn, rowSums(frtfluid.spider[,c(29:32)] >= 2) == 4 & frtfluid.spider$Area.Fluid_U1 > 0 & frtfluid.spider$Area.Fluid_U2 > 0 & frtfluid.spider$Area.Fluid_PM1 > 0 & frtfluid.spider$Area.Fluid_PM2 > 0))) #756
+
+#The vast majority of fluid proteins are identified in the Tissue
+length(which(Fluid.proteins %in% Tissue.proteins)) #724
+length(which(Fluid.proteins %in% Tissue.proteins)) / length(Fluid.proteins) #95.8%
+#There are 32 proteins identified in the fluid and not the tissue
+
+#Restrict dataset to only include proteins expressed in either tissues or fluid
+frtfluid.spider.top <- subset(frtfluid.spider, frtfluid.spider$primary_FBgn %in% Tissue.proteins | frtfluid.spider$primary_FBgn %in% Fluid.proteins) #1840
+frtfluid.spider.top <- frtfluid.spider.top[,c(1,2, 15:22)]
+
+#Save list of all proteins identified as the background
+Background <- as.character(frtfluid.spider.top$primary_FBgn)
+write.table(Background, "Background.FRT.Tissue.Fluid.txt", col.names = F, row.names = F, quote = F)
+
+#create normalized df - log2 transformed and mean centered
+frtfluid.spider.top.norm <- frtfluid.spider.top
+frtfluid.spider.top.norm[is.na(frtfluid.spider.top.norm)] <- as.integer(0)
+frtfluid.spider.top.norm[,c(3:10)] <- scale(log(frtfluid.spider.top.norm[,c(3:10)] +1, 2), center=T, scale=F)
+
+write.table(frtfluid.spider.top.norm, "frtfluid.spider.top.norm.txt", row.names=F, col.names=T)
+```
+
+Compare proteins expressed in either tissue or fluid
+```{r}
+#Use Upset to compare lists and extract out FBgn of unique and shared proteins
+#tiff('FRT.Fluid.Protein.Ident.tiff', units="in", width=4.5, height=2, res=300)
+listInput <- list(Tissue = Tissue.proteins, Fluid = Fluid.proteins)
+upset(fromList(listInput), order.by="freq")
+
+Tissue.only.proteins <- subset(Tissue.proteins, !(Tissue.proteins %in% Fluid.proteins))
+write.table(Tissue.only.proteins, "Tissue.only.proteins.txt", col.names=F, row.names = F, quote = F)
+
+Fluid.only.proteins <- subset(Fluid.proteins, !(Fluid.proteins %in% Tissue.proteins))
+write.table(Fluid.only.proteins, "Fluid.only.proteins.txt", col.names=F, row.names = F, quote = F)
+
+TissueandFluid.proteins <- subset(Tissue.proteins, Tissue.proteins %in% Fluid.proteins)
+write.table(TissueandFluid.proteins, "TissueandFluid.proteins.txt", col.names=F, row.names = F, quote = F)
+
+FRT.proteins <- unique(c(Tissue.only.proteins, Fluid.only.proteins, TissueandFluid.proteins))
+
+write.table(FRT.proteins, "FRT.proteins.txt", quote=F, col.names=F, row.names=F, sep=",")
+
+frtfluid.spider.top$expression <- ifelse(frtfluid.spider.top$primary_FBgn %in% Tissue.only.proteins, "TissueOnly", ifelse(frtfluid.spider.top$primary_FBgn %in% Fluid.only.proteins, "FluidOnly", "TissueandFluid"))
+
+length(unique(c(Tissue.proteins, Fluid.proteins)))
+
+#make a file with all proteins and their designations
+protein.categories <- frtfluid.spider.top.norm[,c(1,2)]
+protein.categories$FoundIn <- ifelse(protein.categories$primary_FBgn %in% TissueandFluid.proteins, "TissueFluid", ifelse(protein.categories$primary_FBgn %in% Fluid.only.proteins, "FluidOnly", ifelse(protein.categories$primary_FBgn %in% Tissue.only.proteins, "TissueOnly", "Fuck")))
+write.table(protein.categories, "TissueFluidProteome.ProteinDesignations.txt", col.names = T, row.names = F, quote = F,)
+
+
+#Make a venn diagram
+
+vd <- euler(c(Tissue=1084, Fluid=32, "Tissue&Fluid"=724))
+
+#tiff('FRT.Fluid.Protein.Ident.tiff', units="in", width=5, height=5, res=300)
+plot(vd, edges = c("chartreuse3", "mediumpurple3"), fills=c("white", "white", "grey85"), labels=F, lwd=2)
+
+```
+
+Get full GO enrichment analysis for each set of proteins
+```{r}
+#tissue only proteins
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% Tissue.only.proteins & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> sigGenes_ncbi
+
+as_tibble(aux_IDs) %>% filter(na_based_protein_accession != "NA") %>% filter(primary_FBgn %in% FRT.summary$FBgn) %>% pull(na_based_protein_accession) -> FRT_ncbi
+
+ego <- enrichGO(gene          = sigGenes_ncbi,
+                universe      = FRT_ncbi,
+                # keyType       = 'ENTREZID',
+                OrgDb         = org.Dm.eg.db,
+                ont           = "ALL",
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05, 
+                readable      = TRUE)
+
+ego.TissueOnly <- as.data.frame(ego)
+write.table(ego.TissueOnly, "ego.TissueOnly.csv", quote=F, col.names = T, row.names = F, sep=",")
+
+#fluid proteins
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% TissueandFluid.proteins & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> sigGenes_ncbi
+
+as_tibble(aux_IDs) %>% filter(na_based_protein_accession != "NA") %>% filter(primary_FBgn %in% FRT.summary$FBgn) %>% pull(na_based_protein_accession) -> FRT_ncbi
+
+ego <- enrichGO(gene          = sigGenes_ncbi,
+                universe      = FRT_ncbi,
+                # keyType       = 'ENTREZID',
+                OrgDb         = org.Dm.eg.db,
+                ont           = "ALL",
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05, 
+                readable      = TRUE)
+
+ego.Fluid <- as.data.frame(ego)
+write.table(ego.Fluid, "ego.Fluid.csv", quote=F, col.names = T, row.names = F, sep=",")
+
+#fluid only proteins
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% Fluid.only.proteins & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> sigGenes_ncbi
+
+as_tibble(aux_IDs) %>% filter(na_based_protein_accession != "NA") %>% filter(primary_FBgn %in% FRT.summary$FBgn) %>% pull(na_based_protein_accession) -> FRT_ncbi
+
+ego <- enrichGO(gene          = sigGenes_ncbi,
+                universe      = FRT_ncbi,
+                # keyType       = 'ENTREZID',
+                OrgDb         = org.Dm.eg.db,
+                ont           = "ALL",
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05, 
+                readable      = TRUE)
+
+ego.FluidOnly <- as.data.frame(ego)
+write.table(ego.FluidOnly, "ego.FluidOnly.csv", quote=F, col.names = T, row.names = F, sep=",")
+
+ego.Fluid2 <- ego.Fluid
+ego.Fluid2$sample <- "Fluid"
+ego.Fluid2 <- ego.Fluid2[c("GO:0002181", "GO:0005975","GO:0022626","GO:0000502","GO:0099512","GO:0003743","GO:0070003","GO:0008092" ),]
+
+ego.TissueOnly2 <- ego.TissueOnly
+ego.TissueOnly2$sample <- "Tissue"
+ego.TissueOnly2 <- ego.TissueOnly2[c("GO:0045333","GO:0015031","GO:0005746","GO:0044391", "GO:0005783", "GO:0001882", "GO:0009055"),]
+
+Compare.ego <- rbind(ego.Fluid2, ego.TissueOnly2)
+Compare.ego$total <- sub("\\/.*", "", Compare.ego$BgRatio)
+Compare.ego$total <- as.numeric(Compare.ego$total)
+Compare.ego$Count <- as.numeric(Compare.ego$Count)
+Compare.ego$generatio <- Compare.ego$Count/ Compare.ego$total
+
+Compare.ego$Description <- c("cytoplasmic\ntranslation",            "carbohydrate\nmetabolic process", "cytosolic\nribosome",               "proteasome\ncomplex","supramolecular\nfiber", "translation initiation\nfactoractivity", "threonine-type\npeptidase activity", "cytoskeletal\nprotein binding", "cellular\nrespiration","protein\ntransport", "mitochondrial\nrespiratory chain","ribosomal\nsubunit", "endoplasmic\nreticulum","nucleoside\nbinding", "electron transfer\nactivity")
+
+
+tiff('GO.comparison.tiff', units="in", width=7, height=5, res=300)
+ggplot(Compare.ego, aes(reorder(Description, -pvalue), -log10(pvalue), fill = generatio, size= Count))+
+  geom_point(pch=21, color="black")+
+  coord_flip()+
+facet_wrap(~ interaction(sample, ONTOLOGY), scales='free_y', nrow=3, ncol=2)  + 
+scale_fill_gradient(low = 'white', high = 'black')+
+  theme_classic()+
+  theme(strip.background = element_blank(), strip.text.x = element_blank())+
+  theme(legend.position = "none")
+dev.off()
+
+ggplot(Compare.ego, aes(reorder(Description, -pvalue), -log10(pvalue), fill = generatio, size= Count))+
+  geom_point(pch=21, color="black")+
+  coord_flip()+
+facet_wrap(~ interaction(sample, ONTOLOGY), scales='free_y', nrow=3, ncol=2)  + 
+scale_fill_gradient(low = 'white', high = 'black')+
+  theme_classic()+
+  theme(legend.position="bottom")
+
+
+
+```
+
+Look at representation of proteins whose gene sequences have a signal sequence
+```{r}
+length(which((FRT.summary$FBgn %in% signal$FBgn)))
+#1236
+length(which((FRT.summary$FBgn %in% signal$FBgn)))/length(FRT.summary$FBgn) #14.8
+
+length(which(Fluid.proteins %in% signal$FBgn)) #89
+length(which(Fluid.proteins %in% signal$FBgn))/ length(Fluid.proteins) #11.7
+
+length(which(Tissue.proteins %in% signal$FBgn)) #267
+length(which(Tissue.proteins %in% signal$FBgn))/ length(Tissue.proteins) #14.76
+
+length(which(Tissue.only.proteins %in% signal$FBgn)) #190
+length(which(Tissue.only.proteins %in% signal$FBgn))/ length(Tissue.only.proteins) #17.5
+
+pbinom(89, size = 756, prob = 267/1808, lower.tail = T) # 0.01
+89/756 #11.8%
+267/1808 #14.8%
+```
+
+Test the difference in representation of exosomes/vesicles
+```{r}
+length(which(exocarta.fbgn$V3 %in% exo.vesicles$FBgn))
+
+length(which(exo.vesicles$FBgn %in% Fluid.proteins))#227
+length(Fluid.proteins) # 756
+227 / 756
+length(which(exo.vesicles$FBgn %in% Tissue.only.proteins)) 
+90 / 1084
+length(which(exo.vesicles$FBgn %in% Fluid.only.proteins)) 
+1 / 32
+
+pbinom(227, size=756, prob=(226+90+1)/(724+1084+32), lower.tail = F)
+```
+
+Look at peptides to evaluate fluid/tissue representation
+```{r}
+
+peptides <- read.table("FRT_Fluid_NoLabel_r32_PEAKS_99_PSMs_peptide.csv", sep=",", header=T)
+peptides$Peptide <- gsub("\\s*\\([^\\)]+\\)","",as.character(peptides$Peptide))
+
+peptide2 <- gather(peptides, sample, feature_each, Feature.FRT_U1:Feature.Fluid_PM2, factor_key=TRUE)
+
+peptide.count <- peptide2 %>%
+  filter(feature_each > 0) %>%
+  filter(Accession != "") %>%
+  distinct(Peptide,sample, .keep_all= TRUE) %>%
+  group_by(Accession, sample) %>%
+  tally()
+
+length(unique(peptide.count$Accession)) - length((unique(peptide.count$Accession))) #112
+length(unique(peptide.count$Accession)) #2841
+
+peptide.count.unique <- peptide.count[ grep(":", peptide.count$Accession, invert = TRUE) , ]
+
+
+pep.avg <- peptide.count.unique %>%
+  group_by(sample) %>%
+  dplyr::summarise(avg.peptide = mean(n))
+
+#tiff('Tau.dist.tiff', units="in", width=5, height=5, res=300)
+ggplot(peptide.count.unique, aes(x= log(n,2), color=sample)) +
+  geom_density(alpha=0.4)+
+  theme_classic()+
+    xlab("Log2 number of peptides per protein")+
+  ylab("density")
+
+ggplot(peptide.count.unique, aes(x=sample, y= log(n,2), fill=sample)) +
+  geom_boxplot(outlier.color=NA)+
+  geom_jitter(pch=21, alpha=0.5, fill="white", position=position_jitter(width=.2), cex=0.5)+
+  theme_classic()+
+    xlab("Log2 number of peptides per protein")+
+  ylab("density")
+
+
+peptide.count.unique$identified <- ifelse(peptide.count.unique$Accession %in% Tissue.proteins & grepl("FRT", peptide.count.unique$sample), "Y", ifelse(peptide.count.unique$Accession %in% Fluid.proteins & grepl("Fluid", peptide.count.unique$sample), "Y", "N"))
+
+
+pep.avg2 <- subset(peptide.count.unique, peptide.count.unique$identified == "Y")
+pep.avg2 <- pep.avg2 %>%
+  group_by(sample)%>%
+  dplyr::summarise(avg.peptide = mean(n), sum= sum(n))
+
+pep.avg2 <- as.data.frame(pep.avg2)
+mean(pep.avg2[1:4,3]) #18633
+sd(pep.avg2[1:4,3])/sqrt(length(pep.avg2[1:4,3])) #552
+
+mean(pep.avg2[5:8,3]) #8750
+sd(pep.avg2[5:8,3])/sqrt(length(pep.avg2[5:8,3])) #1141
+
+mean(pep.avg2[1:4,2]) #10.34
+sd(pep.avg2[1:4,2])/sqrt(length(pep.avg2[1:4,2])) #0.31
+
+mean(pep.avg2[5:8,2]) #11.64
+sd(pep.avg2[5:8,2])/sqrt(length(pep.avg2[5:8,2])) #1.52
+
+
+
+#tiff('PSMs.density.tiff', units="in", width=6.5, height=5, res=300)
+ggplot(subset(peptide.count.unique, peptide.count.unique$identified == "Y"), aes(x= log(n,2), color=sample)) +
+  geom_density(alpha=0.4)+
+  theme_classic()+
+    xlab("Log2 number of peptides per protein")+
+  ylab("density")
+dev.off()
+
+#tiff('PSMs.boxplot.tiff', units="in", width=6.5, height=5, res=300)
+ggplot(subset(peptide.count.unique, peptide.count.unique$identified == "Y"), aes(x=sample, y= log(n,2), fill=sample)) +
+  geom_boxplot(outlier.color=NA)+
+  geom_jitter(pch=21, alpha=0.5, fill="white", position=position_jitter(width=.2), cex=0.5)+
+  theme_classic()+
+    xlab("Sample")+
+  ylab("Log2 number of peptides per protein")
+dev.off()
+
+peptide.count.unique2 <- as.data.frame(peptide.count.unique)
+peptide.count.unique2$sample <- as.character(peptide.count.unique2$sample)
+
+peptide.count.unique2 <- peptide.count.unique %>%
+  mutate(corrected_n = case_when(sample == "Feature.FRT_U1" ~ n/17120,
+          sample == "Feature.FRT_U2" ~ n/18554,
+          sample == "Feature.FRT_PM2" ~ n/19646,
+          sample == "Feature.FRT_PM1" ~ n/19212,
+          sample == "Feature.Fluid_U2" ~ n/	11758,
+          sample == "Feature.Fluid_U1" ~ n/9171,
+          sample == "Feature.Fluid_PM1" ~ n/7554,
+          sample == "Feature.Fluid_PM2" ~ n/6518))
+
+pep.avg3 <- subset(peptide.count.unique2, peptide.count.unique2$identified == "Y")
+pep.avg3 <- pep.avg3 %>%
+  group_by(sample)%>%
+  dplyr::summarise(avg.peptide = mean(corrected_n))
+
+#tiff('PSMs.boxplot.tiff', units="in", width=6.5, height=5, res=300)
+ggplot(subset(peptide.count.unique2, peptide.count.unique2$identified == "Y"), aes(x=sample, y= log(corrected_n,2), fill=sample)) +
+  geom_boxplot(outlier.color=NA)+
+  geom_jitter(pch=21, alpha=0.5, fill="white", position=position_jitter(width=.2), cex=0.5)+
+  theme_classic()+
+    xlab("Sample")+
+  ylab("Log2 number of peptides per protein")
+#dev.off()
+
+```
+
+Look at protein abundance differences between tissue and fluid
+```{r}
+
+frtfluid.spider.top.norm$Tissue.U <- rowMeans(frtfluid.spider.top.norm[,c(3,4)])
+frtfluid.spider.top.norm$Tissue.PM <- rowMeans(frtfluid.spider.top.norm[,c(5,6)])
+frtfluid.spider.top.norm$Tissue <- rowMeans(frtfluid.spider.top.norm[,c(3:6)])
+
+
+frtfluid.spider.top.norm$Fluid.U <- rowMeans(frtfluid.spider.top.norm[,c(7,8)])
+frtfluid.spider.top.norm$Fluid.PM <- rowMeans(frtfluid.spider.top.norm[,c(9,10)])
+frtfluid.spider.top.norm$Fluid <- rowMeans(frtfluid.spider.top.norm[,c(7:10)])
+
+frtfluid.spider.top.norm$inFluid <- ifelse(frtfluid.spider.top.norm$primary_FBgn %in% Fluid.proteins, "Y", "N")
+
+frtfluid.spider.top.norm$fluid.only <- ifelse(frtfluid.spider.top.norm$primary_FBgn %in% Fluid.only.proteins, "Y", "N")
+
+#tiff('Tau.dist.tiff', units="in", width=5, height=5, res=300)
+ggplot(frtfluid.spider.top.norm, aes(x=Tissue, color=inFluid)) +
+  geom_density(alpha=0.4)+
+  scale_color_manual(values=c("chartreuse3", "mediumpurple3"))+
+  theme_classic()+
+    xlab("Normalized tissue protein abundance")+
+  ylab("Protein density")
+
+#tiff('protein.influid.tiff', units="in", width=5, height=5, res=300)
+ggplot(subset(frtfluid.spider.top.norm, frtfluid.spider.top.norm$primary_FBgn %in% Tissue.proteins), aes(x=inFluid, y=Tissue, fill=inFluid)) +
+  geom_jitter(alpha=0.2, size=0.5, position=position_jitter(width=.2))+
+  geom_boxplot(alpha=0.5, outlier.colour = NA)+
+  scale_fill_manual(values=c("chartreuse3", "mediumpurple3"))+
+  theme_classic()+
+    xlab("Protein identified in tissue")+
+  ylab("Normalized tissue protein abundance")+
+  theme(legend.position = "none")
+
+kruskal.test(Tissue ~ inFluid, data=frtfluid.spider.top.norm) # p < 0.001
+
+#tiff('fluid.only.tiff', units="in", width=5, height=5, res=300)
+ggplot(subset(frtfluid.spider.top.norm, frtfluid.spider.top.norm$primary_FBgn %in% Fluid.proteins), aes(x=fluid.only, y=Fluid, fill=fluid.only)) +
+  geom_jitter(alpha=0.2, size=0.5, position=position_jitter(width=.2))+
+  geom_boxplot(alpha=0.5, outlier.colour = NA)+
+  scale_fill_manual(values=c("mediumpurple3", "red"))+
+  theme_classic()+
+  xlab("Protein identified in fluid")+
+  ylab("Normalized fluid protein abundance")+
+  theme(legend.position = "none")
+
+kruskal.test(Fluid ~ fluid.only, data=subset(frtfluid.spider.top.norm, frtfluid.spider.top.norm$primary_FBgn %in% Fluid.proteins)) # p < 0.001
+
+```
+
+Look at the abundance-rank distribution of proteins
+```{r}
+frtfluid.spider.top.norm$tissue2 <- ifelse(frtfluid.spider.top.norm$primary_FBgn %in% Tissue.proteins, frtfluid.spider.top.norm$Tissue, NA )
+frtfluid.spider.top.norm$tissue.rank <- rank(frtfluid.spider.top.norm$tissue2, ties.method = "random", na.last = "keep")
+
+frtfluid.spider.top.norm$fluid2 <- ifelse(frtfluid.spider.top.norm$primary_FBgn %in% Fluid.proteins, frtfluid.spider.top.norm$Fluid, NA )
+frtfluid.spider.top.norm$fluid.rank <- rank(frtfluid.spider.top.norm$fluid2, ties.method = "random", na.last = "keep")
+
+frtfluid.spider.top.norm.long.tissue <- frtfluid.spider.top.norm %>% gather(Sample, Area, Area.FRT_U1: Area.FRT_PM1)
+
+frtfluid.spider.top.norm.long.fluid <- frtfluid.spider.top.norm %>% gather(Sample, Area, Area.Fluid_U2: Area.Fluid_PM2)
+
+#tiff('tissue.rank.tiff', units="in", width=8, height=4, res=300)
+ggplot(subset(frtfluid.spider.top.norm.long.tissue, frtfluid.spider.top.norm.long.tissue$primary_FBgn %in% Tissue.proteins), aes(x=tissue.rank, y=Area, group=tissue.rank, color=inFluid)) +
+geom_boxplot(alpha= 0.8, lwd=0.2, outlier.size= 0.2)+
+scale_color_manual(values=c("chartreuse3","mediumpurple3"))+
+  xlab("Ranked abundance")+
+  ylab("Normalized tissue protein abundance")+
+theme_classic()+
+   theme(legend.position="none")
+#dev.off()
+
+#tiff('fluid.rank.tiff', units="in", width=5.5, height=3, res=300)
+ggplot(subset(frtfluid.spider.top.norm.long.fluid, frtfluid.spider.top.norm.long.fluid$primary_FBgn %in% Fluid.proteins), aes(x=fluid.rank, y=Area, group=fluid.rank, color=fluid.only)) +
+geom_boxplot(alpha= 0.8, lwd=0.2, outlier.size= 0.2)+
+scale_color_manual(values=c("mediumpurple3", "red"))+
+    xlab("Ranked abundance")+
+  ylab("Normalized fluid protein abundance")+
+theme_classic()
+#dev.off()
+
+
+```
+
+
+Compare to RNAseq data - what proteins ahave transcripts that are expressed
+```{r}
+#How much of the proteomes are identified in the transcriptome
+length(which(Background %in% FRT.summary$FBgn)) #1797
+length(which(Background %in% FRT.summary$FBgn)) / length(Background) #97.66
+
+frtfluid.spider.top.notRNA <- subset(frtfluid.spider.top, !(frtfluid.spider.top$primary_FBgn %in% FRT.summary$FBgn)) #43 proteins
+
+length(which(Tissue.proteins %in% FRT.summary$FBgn)) #1766
+length(which(Tissue.proteins %in% FRT.summary$FBgn)) / length(Tissue.proteins) #97.68
+
+length(which(Fluid.proteins %in% FRT.summary$FBgn)) #744
+length(which(Fluid.proteins %in% FRT.summary$FBgn)) / length(Fluid.proteins) #98.41
+
+#Overall the proteome represents 21.55% of the predicted transcriptome based on the proteome
+length(which(Background %in% FRT.summary$FBgn)) / length(FRT.summary$FBgn)
+```
+
+
+Test if identified proteins have higher total expression in the FRT transcriptome
+```{r}
+#First update transcriptome data to have sum of FRT expression
+Sum.Avg.FRT <- Avg.CPM
+Sum.Avg.FRT$Sum.U <- rowSums(Sum.Avg.FRT[,c(1,4,7,10,13,16)])
+Sum.Avg.FRT$Sum.6 <- rowSums(Sum.Avg.FRT[,c(2,4,8,11,14,17)])
+Sum.Avg.FRT$Sum.24 <- rowSums(Sum.Avg.FRT[,c(3,5,9,12,15,18)])
+Sum.Avg.FRT <- Sum.Avg.FRT[,c(20:22)]
+Sum.Avg.FRT <- log(Sum.Avg.FRT + 1, 2)
+Sum.Avg.FRT$DE <- Sum.Avg.FRT$Sum.6 - Sum.Avg.FRT$Sum.U
+Sum.Avg.FRT$FBgn <- rownames(Sum.Avg.FRT)
+
+Sum.Avg.FRT$Protein <- ifelse(Sum.Avg.FRT$FBgn %in% Background, "Y", "N")
+
+Sum.Avg.FRT$Protein.spec <- ifelse(Sum.Avg.FRT$FBgn %in% Tissue.proteins & Sum.Avg.FRT$FBgn %in% Fluid.proteins, "TissueandFluid", ifelse(Sum.Avg.FRT$FBgn %in% Tissue.proteins, "Tissue", ifelse(Sum.Avg.FRT$FBgn %in% Fluid.proteins, "Fluid", "Not")))
+
+Sum.Avg.FRT$Protein.spec2 <- ifelse(Sum.Avg.FRT$FBgn %in% Tissue.only.proteins, "Tissue only", ifelse(Sum.Avg.FRT$FBgn %in% Fluid.only.proteins, "Fluid", ifelse(Sum.Avg.FRT$FBgn %in% TissueandFluid.proteins, "Fluid", "Not Identified")))
+
+Sum.Avg.FRT$Protein.spec2 <- factor(Sum.Avg.FRT$Protein.spec2, level= c("Not Identified", "Tissue only", "Fluid"))
+
+#tiff('IDprotein.GeneExpr.tiff', units="in", width=5, height=5, res=300)
+ggplot(data=Sum.Avg.FRT, aes(x= Protein, y= Sum.U, fill=Protein))+
+  scale_fill_manual(values=c("white", "red"))+
+  geom_jitter(size = 0.5, alpha=0.2, col="black")+
+  geom_boxplot(alpha=0.5)+
+  theme_classic()
+
+kruskal.test(Sum.Avg.FRT$Sum.U, Sum.Avg.FRT$Protein)
+#yep very significant
+
+sum.avg.sub <- subset(Sum.Avg.FRT, Sum.Avg.FRT$Protein.spec2 != "Not Identified")
+kruskal.test(sum.avg.sub$Sum.U, sum.avg.sub$Protein.spec2)
+
+#tiff('IDprotein.GeneExpr.tiff', units="in", width=5, height=5, res=300)
+ggplot(data=Sum.Avg.FRT, aes(x= Protein.spec2, y= Sum.U, fill=Protein.spec2))+
+  scale_fill_manual(values=c("white", "chartreuse3", "mediumpurple3"))+
+  geom_jitter(size = 0.5, alpha=0.2, col="black", position=position_jitter(width=.2))+
+  geom_boxplot(alpha=0.5, outlier.colour = NA)+
+  xlab("Protein Identification")+
+  ylab("Log2 Sum of FRT tissue gene expression (CPM)")+
+  theme_classic() +
+  theme(legend.position = "none")
+
+1840/8337
+```
+
+Look at correlation in gene expression (summed among tissues) and protein expression
+```{r}
+FRT.summary.protein.2 <- left_join(frtfluid.spider.top.norm, Sum.Avg.FRT, by=c("primary_FBgn" = "FBgn"))
+FRT.summary.protein.2$Fluid <- rowMeans(FRT.summary.protein.2[,c(7:10)])
+FRT.summary.protein.2$Tissue <- rowMeans(FRT.summary.protein.2[,c(3:6)])
+FRT.summary.protein.2 <- left_join(FRT.summary.protein.2, FRT.summary, by=c("primary_FBgn" = "FBgn"))
+
+FRT.summary.protein.2$Protein.spec <- ifelse(FRT.summary.protein.2$primary_FBgn %in% Tissue.only.proteins, "Tissue.only", ifelse(FRT.summary.protein.2$primary_FBgn %in% Fluid.only.proteins, "Fluid.only", ifelse(FRT.summary.protein.2$primary_FBgn %in% TissueandFluid.proteins, "TissueFluid", NA)))
+
+FRT.summary.protein.2$Protein.spec2 <- ifelse(FRT.summary.protein.2$primary_FBgn %in% Tissue.only.proteins, "Tissue.only", ifelse(FRT.summary.protein.2$primary_FBgn %in% Fluid.only.proteins, "Fluid", ifelse(FRT.summary.protein.2$primary_FBgn %in% TissueandFluid.proteins, "Fluid", NA)))
+
+
+#tiff("tissue.rna.expr.tiff", units="in", width=5, height=5, res=300)
+ggplot(data = subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Tissue.proteins), aes(x= Tissue, y=Sum.U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col="chartreuse3")+
+  xlab("Tissue Protein Abundance") +
+  ylab("Log2 sum of FRT tissue gene expression (CPM)")+
+  theme_classic()
+#dev.off()
+
+round(summary(lm(Tissue ~ Sum.U, data=subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Tissue.proteins)))$r.squared, 2) #0.35
+lmp(lm(Tissue ~ Sum.U, data=subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Tissue.proteins))) # p<0.001
+
+tissue.resample <- subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Tissue.proteins)
+tissue.resample <- na.omit(tissue.resample[, c("Tissue", "Sum.U")])
+tissue.resample.tissue <-tissue.resample$Tissue
+tissue.resample.sum <-tissue.resample$Sum.U
+
+dat <- tissue.resample[, c("Tissue", "Sum.U")]
+N <- 744 #sample size of fluid see below
+R <- 1000
+cor.orig <- cor.test(dat$Tissue, dat$Sum.U, method="spearman")
+cor.boot <- NULL
+for (i in 1:R) {
+  idx <- sample.int(N, N, replace = TRUE) 
+  cor.boot[i] <- cor(dat[idx, ], method="spearman")[1,2] 
+}
+cor.orig
+mean(cor.boot) #0.56
+mean(cor.boot)^2
+t.val <- (mean(cor.boot) * sqrt(744 - 2)) / (sqrt(1 - mean(cor.boot)^2))
+p.val <- 2*pt(-abs(t.val), df=744-1)
+t.val
+p.val
+
+
+#tiff("fluid.rna.expr.tiff", units="in", width=5, height=5, res=300)
+ggplot(data = subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Fluid.proteins), aes(x=Fluid, y=Sum.U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col="mediumpurple3")+
+  xlab("Fluid Protein Abundance") +
+  ylab("Log2 sum of FRT tissue gene expression (CPM)")+
+  theme_classic()
+#dev.off()
+
+round(summary(lm(Fluid ~ Sum.U, subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Fluid.proteins)))$r.squared, 2) #0.18
+lmp(lm(Fluid ~ Sum.U, data=FRT.summary.protein.2)) # p<0.001
+
+fluid.resample <- subset(FRT.summary.protein.2, FRT.summary.protein.2$primary_FBgn %in% Fluid.proteins)
+fluid.resample <- na.omit(fluid.resample[, c("Fluid", "Sum.U")])
+
+dat <- fluid.resample
+N <- 744
+R <- 1000
+cor.orig <- cor.test(dat$Fluid, dat$Sum.U, method="spearman")
+cor.boot <- NULL
+for (i in 1:R) {
+  idx <- sample.int(N, N, replace = TRUE) 
+  cor.boot[i] <- cor(dat[idx, ], method="spearman")[1,2] }
+cor.orig
+mean(cor.boot) #0.44
+mean(cor.boot)^2 #0.19
+t.val <- (mean(cor.boot) * sqrt(744 - 2)) / (sqrt(1 - mean(cor.boot)^2))
+p.val <- 2*pt(-abs(t.val), df=744-1)
+t.val
+p.val
+```
+
+
+
+Look at tau distributions of proteins
+Look at tissue with max expression for those with tau > 0.75
+```{r}
+
+#tiff('Tau.dist.tiff', units="in", width=5, height=5, res=300)
+ggplot(subset(FRT.summary.protein.2, FRT.summary.protein.2$Protein.spec2 != "Not Identified"), aes(x=tau, color=Protein.spec2)) +
+  geom_density(alpha=0.4)+
+  scale_color_manual(values=c("mediumpurple3", "chartreuse3"))+
+  geom_vline(xintercept=0.9, lty=2, col="black")+
+  theme_classic()+
+    xlab("FRT transcriptome tau (tissue specificity)")+
+  ylab("Protein density")+
+  theme(legend.position = "none")
+
+FRT.summary.3 <- FRT.summary
+FRT.summary.3$Protein.spec2 <- "FRT Background"
+
+FRT.summary.protein.3 <- merge(FRT.summary.protein.2, FRT.summary.3, by = intersect(names(FRT.summary.protein.2), names(FRT.summary.3)))
+
+FRT.summary.protein.3 <- rbind.fill(FRT.summary.protein.2, FRT.summary.3)
+
+#tiff('Tau.dist.tiff', units="in", width=5, height=5, res=300)
+ggplot(subset(FRT.summary.protein.3, FRT.summary.protein.2$Protein.spec2 != "Not Identified"), aes(x=tau, color=Protein.spec2)) +
+  geom_density(alpha=0.4)+
+  scale_color_manual(values=c("mediumpurple3", "grey45", "chartreuse3"))+
+  geom_vline(xintercept=0.75, lty=2, col="black")+
+  theme_classic()+
+    xlab("FRT transcriptome tau (tissue specificity)")+
+  ylab("Protein density")+
+  theme(legend.position = "none")
+
+
+#tiff('Tau.dist.tiff', units="in", width=5, height=5, res=300)
+ggplot(subset(FRT.summary.protein.3, FRT.summary.protein.2$Protein.spec2 != "Not Identified" & FRT.summary.protein.3$Protein.spec2 != "FRT Background"), aes(x=tau, color=Protein.spec2)) +
+  geom_density(alpha=0.4)+
+  scale_color_manual(values=c("mediumpurple3", "chartreuse3"))+
+  geom_vline(xintercept=0.75, lty=2, col="black")+
+  theme_classic()+
+    xlab("FRT transcriptome tau (tissue specificity)")+
+  ylab("Protein density")+
+  theme(legend.position = "none")
+
+
+ks.tissue <- ks.test(subset(FRT.summary.protein.3$tau, FRT.summary.protein.3$Protein.spec2 == "Tissue.only"), subset(FRT.summary.protein.3$tau, FRT.summary.protein.3$Protein.spec2 == "FRT Background"), alternative = "two.sided")
+
+ks.fluid <- ks.test(subset(FRT.summary.protein.3$tau, FRT.summary.protein.3$Protein.spec2 == "Fluid"), subset(FRT.summary.protein.3$tau, FRT.summary.protein.3$Protein.spec2 == "FRT Background"), alternative = "two.sided")
+
+ks.tissuefluid <- ks.test(subset(FRT.summary.protein.3$tau, FRT.summary.protein.3$Protein.spec2 == "Fluid"), subset(FRT.summary.protein.3$tau, FRT.summary.protein.3$Protein.spec2 == "Tissue.only"), alternative = "two.sided")
+
+ks.tissue
+ks.tissue$p.value *3
+ks.fluid
+ks.fluid$p.value * 3
+ks.tissuefluid
+ks.tissuefluid$p.value * 3
+
+```
+
+
+
+Look at tau distributions of proteins
+Look at tissue with max expression for those with tau > 0.9
+Including all frt genes as a background for comparison
+```{r}
+FRT.summary.protein.3$tissuemax2 <- names(FRT.summary.protein.3[,c(36:42)])[max.col(FRT.summary.protein.3[,c(36:42)])]
+
+#compare the number of genes with 0.9 vs. 0.75 cutoff
+
+tau.75 <- subset(FRT.summary.protein.3, FRT.summary.protein.3$tau >= 0.75) %>% group_by(tissuemax2, Protein) %>% summarise(Freq = n())
+
+mean(subset(tau.75$Freq, tau.75$Protein == "Y")) #97
+min(subset(tau.75$Freq, tau.75$Protein == "Y")) #18
+
+tau.90 <- subset(FRT.summary.protein.3, FRT.summary.protein.3$tau >= 0.9) %>% group_by(tissuemax2, Protein) %>% summarise(Freq = n())
+
+mean(subset(tau.90$Freq, tau.90$Protein == "Y")) #27
+min(subset(tau.90$Freq, tau.90$Protein == "Y")) #5
+
+FRT.summary.protein.3$tissuemax2 <- 
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "BURU", "BUR",
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "OVDU", "OVD",
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "SRU", "SR",
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "STU", "ST",
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "POU", "PO",
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "FBU", "FB",
+  ifelse(FRT.summary.protein.3$tau > 0.75 & FRT.summary.protein.3$tissuemax2 == "WF", "WF", "NoMax")))))))
+
+length(subset(FRT.summary.protein.3$primary_FBgn, FRT.summary.protein.3$Protein.spec2 == "FRT Background"))
+
+FRT.Proteins.max <- FRT.summary.protein.3 %>% group_by(tissuemax2, Protein.spec2) %>% tally() 
+
+FRT.Spec.tally <- FRT.summary.protein.3 %>% filter(tissuemax2 != "NoMax") %>% group_by(Protein.spec2) %>% tally()
+
+
+FRT.Proteins.max <- as.data.frame(FRT.Proteins.max)
+FRT.Proteins.max <- FRT.Proteins.max[-c(7:9,22:26),]
+
+sum(subset(FRT.Proteins.max$n, FRT.Proteins.max$Protein.spec2 == "Fluid")) #293
+sum(subset(FRT.Proteins.max$n, FRT.Proteins.max$Protein.spec2 == "Tissue.only")) #314
+sum(subset(FRT.Proteins.max$n, FRT.Proteins.max$Protein.spec2 == "FRT Background")) #2260
+
+FRT.Proteins.max$Proteome.Total <- c(rep(c(293,2260,314),6))
+FRT.Proteins.max$tissue.prot.prop <- FRT.Proteins.max$n / FRT.Proteins.max$Proteome.Total
+
+
+FRT.Proteins.max$tissuemax2 <- factor(FRT.Proteins.max$tissuemax2, levels=rev(c("WF", "FB", "BUR", "OVD", "SR", "ST", "PO")))
+
+FRT.Proteins.max$Protein.spec2 <- factor(FRT.Proteins.max$Protein.spec2, levels=c( "FRT Background", "Tissue.only", "Fluid"))
+
+
+#tiff('TissueMax.Tau75.tiff', units="in", width=5, height=5, res=300)
+ggplot(data= FRT.Proteins.max, aes(fill= tissuemax2, y=tissue.prot.prop, x= Protein.spec2, color=Protein.spec2))+
+  geom_bar(position = "stack", stat="identity") + 
+  scale_fill_manual(values = rev(c("white", "grey", fb.col, bur.col, ovd.col, sr.col, st.col, po.col)))+
+  scale_color_manual(values=c("grey45", "chartreuse3", "mediumpurple3"))+
+  xlab("Protein Identification") +
+  ylab("Max tissue expression (tau > 0.75)")+
+  theme_classic()+
+  theme(legend.position = "none")
+
+chisq.test(subset(FRT.Proteins.max$Proteome.Total, FRT.Proteins.max$Protein.spec2 == "Tissue.only"), p= subset(FRT.Proteins.max$tissue.prot.prop, FRT.Proteins.max$Protein.spec2 == "FRT Background"))
+
+chisq.test(subset(FRT.Proteins.max$Proteome.Total, FRT.Proteins.max$Protein.spec2 == "Fluid"), p= subset(FRT.Proteins.max$tissue.prot.prop, FRT.Proteins.max$Protein.spec2 == "FRT Background"))
+
+chisq.test(subset(FRT.Proteins.max$Proteome.Total, FRT.Proteins.max$Protein.spec2 == "Fluid"), p= subset(FRT.Proteins.max$tissue.prot.prop, FRT.Proteins.max$Protein.spec2 == "Tissue.only"))
+
+
+#comparison to background of all FRT genes
+tissuemax.prop.test <- function(proteome.sample, tissuemax){
+  prop.test(x = subset(FRT.Proteins.max$n, FRT.Proteins.max$Protein.spec2 == proteome.sample & FRT.Proteins.max$tissuemax2 == tissuemax), 
+          n = subset(FRT.Proteins.max$Proteome.Total, FRT.Proteins.max$Protein.spec2 == proteome.sample & FRT.Proteins.max$tissuemax2 == tissuemax),
+          p = subset(FRT.Proteins.max$tissue.prot.prop, FRT.Proteins.max$Protein.spec2 == "FRT Background" & FRT.Proteins.max$tissuemax2 == tissuemax), 
+          alternative = "two.sided",
+          correct = TRUE)}
+
+tissuemax.prop.test("Fluid", "BUR")
+tissuemax.prop.test("Fluid", "BUR")$p.value * 12 #not sig
+tissuemax.prop.test("Fluid", "OVD")
+tissuemax.prop.test("Fluid", "OVD")$p.value * 12#0.06 not sig
+tissuemax.prop.test("Fluid", "SR")
+tissuemax.prop.test("Fluid", "SR")$p.value * 12#<0.001
+tissuemax.prop.test("Fluid", "ST")
+tissuemax.prop.test("Fluid", "ST")$p.value * 12#0,006
+tissuemax.prop.test("Fluid", "PO")
+tissuemax.prop.test("Fluid", "PO")$p.value * 12#0.015
+tissuemax.prop.test("Fluid", "FB")
+tissuemax.prop.test("Fluid", "FB")$p.value * 12#<0.005
+
+tissuemax.prop.test("Tissue.only", "BUR")$p.value * 12#not sig
+tissuemax.prop.test("Tissue.only", "OVD")$p.value * 12#0.07 not sig
+tissuemax.prop.test("Tissue.only", "SR")$p.value * 12#0.02
+tissuemax.prop.test("Tissue.only", "ST")$p.value * 12#notsig
+tissuemax.prop.test("Tissue.only", "PO")$p.value * 12#notsig
+tissuemax.prop.test("Tissue.only", "FB")$p.value * 12# < 0.001
+
+tissuemax.prop.test("Tissue.only", "BUR")
+tissuemax.prop.test("Tissue.only", "OVD")
+tissuemax.prop.test("Tissue.only", "SR")
+tissuemax.prop.test("Tissue.only", "ST")
+tissuemax.prop.test("Tissue.only", "PO")
+tissuemax.prop.test("Tissue.only", "FB")
+
+#comparison of fluid to tissue
+tissuemax.prop.test2 <- function(proteome.sample, tissuemax){
+  prop.test(x = subset(FRT.Proteins.max$n, FRT.Proteins.max$Protein.spec2 == proteome.sample & FRT.Proteins.max$tissuemax2 == tissuemax), 
+          n = subset(FRT.Proteins.max$Proteome.Total, FRT.Proteins.max$Protein.spec2 == proteome.sample & FRT.Proteins.max$tissuemax2 == tissuemax),
+          p = subset(FRT.Proteins.max$tissue.prot.prop, FRT.Proteins.max$Protein.spec2 == "Tissue.only" & FRT.Proteins.max$tissuemax2 == tissuemax), 
+          alternative = "two.sided",
+          correct = TRUE)}
+
+tissuemax.prop.test2("Fluid", "BUR")
+tissuemax.prop.test2("Fluid", "OVD")
+tissuemax.prop.test2("Fluid", "SR")
+tissuemax.prop.test2("Fluid", "ST")
+tissuemax.prop.test2("Fluid", "PO")
+tissuemax.prop.test2("Fluid", "FB")
+
+tissuemax.prop.test2("Fluid", "BUR")$p.value * 6 #4 not sig
+tissuemax.prop.test2("Fluid", "OVD")$p.value * 6 #5 not sig
+tissuemax.prop.test2("Fluid", "SR")$p.value * 6 #0.05
+tissuemax.prop.test2("Fluid", "ST")$p.value * 6 #0.07
+tissuemax.prop.test2("Fluid", "PO")$p.value * 6 #0.09
+tissuemax.prop.test2("Fluid", "FB")$p.value * 6 #<0.001
+```
+
+
+Look at relationships among samples
+Using normalized data (na set to 0, log2 transformed, mean centered)
+```{r}
+pca <- prcomp(t(frtfluid.spider.top.norm[,c(3:10)]))
+std_dev <- pca$sdev
+pr_var <- std_dev^2
+prop_varex <- data.frame(pr_var/sum(pr_var))
+plot(pca, type="l")
+
+pca$x
+
+#tiff('FRT.Fluid.PCA.tiff', units="in", width=6, height=3, res=300)
+ggbiplot(pca, obs.scale=1, var.axes = F, choice=1:2, alpha=0)+
+  geom_point(shape=21, cex=4.5,bg=c("white", "white","chartreuse3", "chartreuse3","white", "white", "mediumpurple3", "mediumpurple3"), color = c(rep("chartreuse3", 2),(rep("black",2)), rep("mediumpurple3", 2), (rep("black",2))), alpha=0.8)+
+  theme_classic ()
+
+
+data = as.matrix(frtfluid.spider.top.norm[,c(3:10)])
+sample_cor = cor(data, method='pearson', use='pairwise.complete.obs')
+sample_dist = as.dist(1-sample_cor)
+hc_samples = hclust(sample_dist, method='complete')
+
+my_sample_col <- data.frame(Name = c("FRT.U","FRT.U","FRT.PM","FRT.PM", "Fluid.U","Fluid.U",  "Fluid.PM","Fluid.PM" ))
+row.names(my_sample_col) <- colnames(frtfluid.spider.top.norm[,c(3:10)])
+ann_colors <- list(Name=c("FRT.PM" = "chartreuse4", "FRT.U"= "chartreuse2", "Fluid.PM" = "mediumpurple4", "Fluid.U" = "mediumpurple1"))
+
+
+#tiff('corr.matrix.tiff', units="in", width=5, height=5, res=300)
+heatmap.2(sample_cor, 
+          dendrogram='both',      
+          Rowv=as.dendrogram(hc_samples), 
+          Colv=as.dendrogram(hc_samples), 
+          scale='none', 
+          symm=TRUE, 
+          density.info='none', 
+          col = brewer.pal(9,"Greys"), 
+          trace='none', 
+          ColSideColors = c("chartreuse2", "chartreuse2","chartreuse4", "chartreuse4","mediumpurple1", "mediumpurple1", "mediumpurple4", "mediumpurple4"),
+          RowSideColors = c("chartreuse2", "chartreuse2","chartreuse4", "chartreuse4","mediumpurple1", "mediumpurple1", "mediumpurple4", "mediumpurple4"),
+          labRow = c("FRT_U2","FRT_U1","FRT_PM2","FRT_PM1","Fluid_U1","Fluid_U2", "Fluid_PM2","Fluid_PM1"),
+          labCol = c("FRT_U2","FRT_U1","FRT_PM2", "FRT_PM1","Fluid_U1","Fluid_U2", "Fluid_PM2","Fluid_PM1"),
+          cexCol=0.9, cexRow=0.9, 
+          key=T, key.xlab = "Correlation Coeficient", 
+          key.ylab = "", key.title="Correlation Coeficient")  
+```
+
+
+Calculate normalization factors based on sum of high quality identified proteins
+
+For reference: The default quant output uses (total ion cont). This was super lop sided because it was biased for overestimating protein total based on proteins that may not derive from the FRT (especially in the mated state it would include ejaculate proteins). Thus, I adjusted the normalization to the sum of the total spectral area of all identified proteins.
+```{r}
+frtfluid.raw.sums <- as.data.frame(colSums(na.omit(frtfluid.spider[,c(15:22)])))
+frtfluid.raw.sums$sample <- rownames(frtfluid.raw.sums)
+
+frt.raw.sums <- frtfluid.raw.sums[c(1:4),]
+frt.raw.sums$norm <- frt.raw.sums$`colSums(na.omit(frtfluid.spider[, c(15:22)]))`/ max(frt.raw.sums$`colSums(na.omit(frtfluid.spider[, c(15:22)]))`)
+
+frt.raw.sums$TICnorm <- c(1,0.778, 0.7224, 0.7509)
+frt.raw.sums$adjExpectedRatio <- frt.raw.sums$TICnorm/ frt.raw.sums$norm
+
+fluid.raw.sums <- frtfluid.raw.sums[c(5:8),]
+fluid.raw.sums$norm <- fluid.raw.sums$`colSums(na.omit(frtfluid.spider[, c(15:22)]))`/ max(fluid.raw.sums$`colSums(na.omit(frtfluid.spider[, c(15:22)]))`)
+
+fluid.raw.sums$TICnorm <- c(1, 0.5768, 0.529, 0.5942)
+fluid.raw.sums$adjExpectedRatio <- fluid.raw.sums$TICnorm/ fluid.raw.sums$norm
+
+frtfluid.raw.sums$norm <- frtfluid.raw.sums$`colSums(na.omit(frtfluid.spider[, c(15:22)]))`/ max(frtfluid.raw.sums$`colSums(na.omit(frtfluid.spider[, c(15:22)]))`)
+frtfluid.raw.sums$TICnorm <- c(1, 0.7788, 0.7224, 0.7509, 0.5434, 0.3134, 0.2875, 0.3229)
+frtfluid.raw.sums$adjExpectedRatio <- frtfluid.raw.sums$TICnorm / frtfluid.raw.sums$norm
+```
+
+Read in quant data
+```{r}
+FRT.Fluid.SumAdj.PEAKSQ <- read.table("FRT_Fluid_NoLabel_r32_LABEL FREE_118_TissueV.Fluid_SumAdj_proteins.csv", header=T, sep=",") #1351
+
+FRT.Fluid.SumAdj.PEAKSQ <- subset(FRT.Fluid.SumAdj.PEAKSQ, FRT.Fluid.SumAdj.PEAKSQ$Accession %in% frtfluid.spider.top.norm$primary_FBgn) #1132
+
+FRT.Fluid.SumAdj.PEAKSQ <- right_join(prot.convert, FRT.Fluid.SumAdj.PEAKSQ,  by=c("primary_FBgn" = "Accession"))
+
+
+FRT.SumAdj.PEAKSQ <- read.table("FRT_Fluid_NoLabel_r32_LABEL FREE_120_TissuePrePost_SumAdj_proteins.csv", header=T, sep=",") #1978
+FRT.SumAdj.PEAKSQ <- subset(FRT.SumAdj.PEAKSQ, FRT.SumAdj.PEAKSQ$Accession %in% Tissue.proteins) #1558
+
+FRT.SumAdj.PEAKSQ <- right_join(prot.convert, FRT.SumAdj.PEAKSQ,  by=c("primary_FBgn" = "Accession"))
+
+Fluid.SumAdj.PEAKSQ <- read.table("FRT_Fluid_NoLabel_r32_LABEL FREE_122_FluidUnPost_SumAdj_proteins.csv", header=T, sep=",") #1095
+Fluid.SumAdj.PEAKSQ <- subset(Fluid.SumAdj.PEAKSQ, Fluid.SumAdj.PEAKSQ$Accession %in% Fluid.proteins) #715
+
+Fluid.SumAdj.PEAKSQ <- right_join(prot.convert, Fluid.SumAdj.PEAKSQ,  by=c("primary_FBgn" = "Accession"))
+
+```
+
+Identify proteins differentially abundent between tissue & fluid
+```{r}
+#significance = -10log10(p.value)
+FRT.Fluid.SumAdj.PEAKSQ$p.value <- 10^(FRT.Fluid.SumAdj.PEAKSQ$Significance/-10)
+FRT.Fluid.SumAdj.PEAKSQ$adj.p.value <- FRT.Fluid.SumAdj.PEAKSQ$p.value*1132
+
+FRT.Fluid.SumAdj.PEAKSQ$Log2FC <- log(FRT.Fluid.SumAdj.PEAKSQ$Fluid.Area/ FRT.Fluid.SumAdj.PEAKSQ$Tissue.Area, 2)
+
+write.table(FRT.Fluid.SumAdj.PEAKSQ, "FRT.Fluid.SumAdj.PEAKSQ.txt", quote=F, row.names=F, col.names = T, sep=",")
+
+
+#tiff('FRT.Fluid.Protein.Ident.tiff', units="in", width=6, height=3, res=300)
+ggplot(FRT.Fluid.SumAdj.PEAKSQ, aes(x=log(Tissue.Area +1, 2), y= log(Fluid.Area +1, 2)))+
+  geom_point(pch =21, bg=ifelse(FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC > 0, "mediumpurple3", ifelse(FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC < 0, "chartreuse3", "grey97")), alpha = ifelse(FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.5, 0.8, 0.5))+
+  geom_abline(slope=1, intercept=0, col="black", lty=2, cex=0.75)+
+  theme_classic()+
+  xlab("Log2 Tissue Area")+
+  ylab("Log2 Fluid Area")
+#dev.off()
+
+lmp(lm(log(Tissue.Area +1, 2) ~ log(Fluid.Area +1, 2), data=FRT.Fluid.SumAdj.PEAKSQ)) # p<0.001
+round(summary(lm(log(Tissue.Area +1, 2) ~ log(Fluid.Area +1, 2), data=FRT.Fluid.SumAdj.PEAKSQ))$r.squared, 2) #0.63
+
+cor.test(log(FRT.Fluid.SumAdj.PEAKSQ$Tissue.Area +1, 2), log(FRT.Fluid.SumAdj.PEAKSQ$Fluid.Area +1, 2), method="pearson") # p<0.001
+#r=0.79
+cor.test(log(FRT.Fluid.SumAdj.PEAKSQ$Tissue.Area +1, 2), log(FRT.Fluid.SumAdj.PEAKSQ$Fluid.Area +1, 2), method="pearson")$estimate ^ 2
+
+
+length(which(FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC > 0)) #236
+
+Fluid.biased <- subset(FRT.Fluid.SumAdj.PEAKSQ$primary_FBgn, FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC > 0)
+
+Tissue.biased <- subset(FRT.Fluid.SumAdj.PEAKSQ$primary_FBgn, FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC < 0)
+       
+write.table(subset(FRT.Fluid.SumAdj.PEAKSQ$primary_FBgn, FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC > 0), "FluidBiased.FRTandFluid.txt", col.names=F, row.names=F, quote=F)
+
+length(which(FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC < 0)) #245
+
+write.table(subset(FRT.Fluid.SumAdj.PEAKSQ$primary_FBgn, FRT.Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05 & FRT.Fluid.SumAdj.PEAKSQ$Log2FC < 0), "FRTBiased.FRTandFluid.txt", col.names=F, row.names=F, quote=F)
+
+```
+
+Tissue post-mating analysis
+```{r}
+#significance = -10log10(p.value)
+FRT.SumAdj.PEAKSQ$p.value <- 10^(FRT.SumAdj.PEAKSQ$Significance/-10)
+FRT.SumAdj.PEAKSQ$adj.p.value <- FRT.SumAdj.PEAKSQ$p.value*1558
+
+FRT.SumAdj.PEAKSQ$Log2FC <- log(FRT.SumAdj.PEAKSQ$Tissue_PM.Area/ FRT.SumAdj.PEAKSQ$Tissue_U.Area, 2)
+
+write.table(FRT.SumAdj.PEAKSQ, "FRT.Postmating.txt", quote=F, row.names=F, col.names = T, sep=",")
+
+
+#tiff('FRT.Postmated.tiff.tiff', units="in", width=3.2, height=3.2, res=300)
+ggplot(FRT.SumAdj.PEAKSQ, aes(x=Log2FC, y= log(Significance+1,2)))+
+  geom_vline(xintercept= -2, lty=2, col="black")+
+  geom_vline(xintercept= 2, lty=2, col="black")+
+  geom_point(pch = 21, alpha = 0.8, bg= ifelse(FRT.SumAdj.PEAKSQ$adj.p.value <= 0.05, "chartreuse3", "grey75"))+
+  scale_x_continuous(limits=c(-6.5,6.5), breaks=seq(-6,6, by= 2))+
+  scale_y_continuous(limits=c(0,8), breaks=seq(0,8, by=2))+
+  theme_classic()+
+  xlab("Log2 Post-Mating Differential Abundance")+
+  ylab("Log2 Significance")
+#dev.off()
+
+length(which(FRT.SumAdj.PEAKSQ$adj.p.value < 0.05)) #0
+
+length(which(FRT.SumAdj.PEAKSQ$Log2FC >1)) #75
+length(which(FRT.SumAdj.PEAKSQ$Log2FC < -1)) #67
+
+(75 + 67)/ 1808
+
+length(which(FRT.SumAdj.PEAKSQ$Log2FC >2)) #8
+length(which(FRT.SumAdj.PEAKSQ$Log2FC < -2)) #8
+
+write.table(subset(FRT.SumAdj.PEAKSQ$primary_FBgn, FRT.SumAdj.PEAKSQ$Log2FC > 1), "Tissue.Up.txt", col.names =F, row.names = F, quote=F)
+
+write.table(subset(FRT.SumAdj.PEAKSQ$primary_FBgn, FRT.SumAdj.PEAKSQ$Log2FC < -1), "Tissue.Down.txt", col.names =F, row.names = F, quote=F)
+
+```
+
+Fluid post-mating analysis
+```{r}
+#significance = -10log10(p.value)
+Fluid.SumAdj.PEAKSQ$p.value <- 10^(Fluid.SumAdj.PEAKSQ$Significance/-10)
+Fluid.SumAdj.PEAKSQ$adj.p.value <- Fluid.SumAdj.PEAKSQ$p.value*715
+
+Fluid.SumAdj.PEAKSQ$Log2FC <- log(Fluid.SumAdj.PEAKSQ$Fluid_PM.Area/ Fluid.SumAdj.PEAKSQ$Fluid_U.Area, 2)
+
+write.table(Fluid.SumAdj.PEAKSQ, "Fluid.Postmating.txt", quote=F, row.names=F, col.names = T, sep=",")
+
+
+#tiff('Fluid.Postmated.tiff', units="in", width=3.2, height=3.2, res=300)
+ggplot(Fluid.SumAdj.PEAKSQ, aes(x=Log2FC, y= log(Significance+1,2)))+
+    geom_vline(xintercept= -2, lty=2, col="black")+
+  geom_vline(xintercept= 2, lty=2, col="black")+
+  geom_point(pch = 21, alpha = 0.8, bg=ifelse(Fluid.SumAdj.PEAKSQ$adj.p.value <= 0.05, "mediumpurple2", "grey75"))+
+  scale_x_continuous(limits=c(-6.5,6.5), breaks=seq(-6,6, by= 2))+
+  scale_y_continuous(limits=c(0,8), breaks=seq(0,8, by=2))+
+  theme_classic()+
+  xlab("Log2 Post-Mating Differential Abundance")+
+  ylab("Log2 Significance")
+#dev.off()
+
+length(which(Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05)) #241
+
+length(which(Fluid.SumAdj.PEAKSQ$Log2FC >0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05)) #241
+write.table(subset(Fluid.SumAdj.PEAKSQ$primary_FBgn, Fluid.SumAdj.PEAKSQ$Log2FC >0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05), "Fluid.UpPost.txt", col.names=F, row.names = F, quote=F)
+Fluid.up <- subset(Fluid.SumAdj.PEAKSQ$primary_FBgn, Fluid.SumAdj.PEAKSQ$Log2FC >0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05)
+
+length(which( subset(Fluid.SumAdj.PEAKSQ$primary_FBgn, Fluid.SumAdj.PEAKSQ$Log2FC >0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05)  %in% 
+              subset(FRT.Fluid.SumAdj.PEAKSQ$primary_FBgn, FRT.Fluid.SumAdj.PEAKSQ$adj.p.value & FRT.Fluid.SumAdj.PEAKSQ$Log2FC > 0))) #140
+
+140/241 #58%
+
+write.table(subset(Fluid.SumAdj.PEAKSQ$primary_FBgn, Fluid.SumAdj.PEAKSQ$Log2FC >2 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05), "Fluid.UpPost.Highiest.txt", col.names=F, row.names = F, quote=F)
+
+
+##
+
+length(which(Fluid.SumAdj.PEAKSQ$Log2FC < 0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05)) #67
+write.table(subset(Fluid.SumAdj.PEAKSQ$primary_FBgn, Fluid.SumAdj.PEAKSQ$Log2FC <0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05), "Fluid.DownPost.txt", col.names=F, row.names = F, quote=F)
+Fluid.down <- subset(Fluid.SumAdj.PEAKSQ$primary_FBgn, Fluid.SumAdj.PEAKSQ$Log2FC <0 & Fluid.SumAdj.PEAKSQ$adj.p.value < 0.05)
+
+241/67
+
+308/756
+```
+
+GO analysis of fluid diff abundant proteins
+```{r}
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% Fluid.up & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> sigGenes_ncbi
+
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% FRT.proteins & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> FRT_ncbi
+
+ego <- enrichGO(gene          = sigGenes_ncbi,
+                universe      = FRT_ncbi,
+                # keyType       = 'ENTREZID',
+                OrgDb         = org.Dm.eg.db,
+                ont           = "ALL",
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05, 
+                readable      = TRUE)
+
+ego.Fluid.up <- as.data.frame(ego)
+write.table(ego.Fluid.up, "ego.Fluid.up.csv", quote=F, col.names = T, row.names = F, sep=",")
+
+
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% Fluid.down & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> sigGenes_ncbi
+
+as_tibble(aux_IDs) %>% filter(primary_FBgn %in% FRT.proteins & na_based_protein_accession != "NA") %>% pull(na_based_protein_accession) -> FRT_ncbi
+
+ego <- enrichGO(gene          = sigGenes_ncbi,
+                universe      = FRT_ncbi,
+                # keyType       = 'ENTREZID',
+                OrgDb         = org.Dm.eg.db,
+                ont           = "ALL",
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05, 
+                readable      = TRUE)
+
+ego.Fluid.down <- as.data.frame(ego)
+write.table(ego.Fluid.down, "ego.Fluid.down.csv", quote=F, col.names = T, row.names = F, sep=",")
+```
+
+Compare post-mating abundance changes
+```{r}
+Postmating.compare <- inner_join(FRT.SumAdj.PEAKSQ[,c(1,2,27,28)], Fluid.SumAdj.PEAKSQ[,c(1,27,28)], by=c("primary_FBgn" = "primary_FBgn"))
+
+#tiff('DE.compare.FRTvFluid.sumnorm.tiff', units="in", width=3, height=3, res=300)
+ggplot(Postmating.compare, aes(x=Log2FC.x, y= Log2FC.y))+
+   geom_abline(slope=1, intercept=0, col="black", lty=2, cex=0.75)+
+   geom_point(pch = 21, alpha = ifelse(Postmating.compare$adj.p.value.y < 0.05, 0.8, 0.65), bg= "grey85") +
+  theme_classic()+
+  xlab("Tissue log2 fold change")+
+  ylab("Fluid log2 fold change")+
+  scale_x_continuous(limits = c(-5.25, 5.25), breaks=seq(-4, 4, by=2))+
+  scale_y_continuous(limits = c(-5.25, 5.25), breaks=seq(-4, 4, by=2))
+#dev.off()
+
+
+summary(lm(Log2FC.x ~ Log2FC.y, data=Postmating.compare))$r.squared #0
+lmp(lm(Log2FC.x ~ Log2FC.y, data=Postmating.compare))#0.8
+
+cor.test(Postmating.compare$Log2FC.x, Postmating.compare$Log2FC.y, method="pearson")
+cor.test(Postmating.compare$Log2FC.x, Postmating.compare$Log2FC.y, method="pearson")$estimate^2
+
+```
+
+Compare denisity of Log2FC abundance
+```{r}
+Fluid.density <- Fluid.SumAdj.PEAKSQ[,c(1,28)]
+Fluid.density$Sample <- "Fluid"
+
+Tissue.density <-FRT.SumAdj.PEAKSQ[,c(1,28)]
+Tissue.density$Sample <- "Tissue"
+
+Sample.density <- rbind(Fluid.density, Tissue.density)
+
+leveneTest(Log2FC ~ Sample, data = Sample.density)
+
+
+#tiff('Density.compare.tiff', units="in", width=3, height=3, res=300)
+ggplot(Sample.density, aes(x=Log2FC, color=Sample)) +
+  geom_density(alpha=0.4)+
+  scale_color_manual(values=c("mediumpurple3", "chartreuse3"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  xlab("Log2 fold change")+
+  ylab("Protein density")
+
+length(which(abs(Sample.density$Log2FC) > 1 & Sample.density$Sample == "Tissue")) #142
+length(which(abs(Sample.density$Log2FC) > 1 & Sample.density$Sample == "Tissue"))/length(which(Sample.density$Sample == "Tissue")) #9.1%
+
+length(which(abs(Sample.density$Log2FC) > 1 & Sample.density$Sample == "Fluid")) #270
+length(which(abs(Sample.density$Log2FC) > 1 & Sample.density$Sample == "Fluid"))/ length(which(Sample.density$Sample == "Fluid")) #37%
+
+
+length(which(abs(Sample.density$Log2FC) > 2 & Sample.density$Sample == "Tissue")) #16
+length(which(abs(Sample.density$Log2FC) > 2 & Sample.density$Sample == "Tissue"))/length(which(Sample.density$Sample == "Tissue")) #1%
+
+length(which(abs(Sample.density$Log2FC) > 2 & Sample.density$Sample == "Fluid")) #33
+length(which(abs(Sample.density$Log2FC) > 2 & Sample.density$Sample == "Fluid"))/ length(which(Sample.density$Sample == "Fluid")) #4%
+
+
+length(which(subset(Sample.density$primary_FBgn, Sample.density$Log2FC > 1 & Sample.density$Sample == "Fluid") %in% subset(Sample.density$primary_FBgn, Sample.density$Log2FC > 1 & Sample.density$Sample == "Tissue"))) #4
+
+length(which(subset(Sample.density$primary_FBgn, Sample.density$Log2FC < -1 & Sample.density$Sample == "Fluid") %in% subset(Sample.density$primary_FBgn, Sample.density$Log2FC < -1 & Sample.density$Sample == "Tissue"))) #5
+
+#total of 9 proteins overlap as changing in the same direction
+
+length(which(subset(Sample.density$primary_FBgn, Sample.density$Log2FC > 1 & Sample.density$Sample == "Fluid") %in% subset(Sample.density$primary_FBgn, Sample.density$Log2FC < -1 & Sample.density$Sample == "Tissue"))) #10
+
+length(which(subset(Sample.density$primary_FBgn, Sample.density$Log2FC < -1 & Sample.density$Sample == "Fluid") %in% subset(Sample.density$primary_FBgn, Sample.density$Log2FC > 1 & Sample.density$Sample == "Tissue"))) #4
+
+#total of 14 proteins change in the opposite direction
+
+```
+
+Look at differences in gene length based on diff abundance
+```{r}
+#protein longest isoform protein length (number AA)
+length <- length %>% group_by(V2) %>% top_n(1, V3)
+length <- length[!duplicated(length[2:3]),]
+
+length.protein <- length
+
+length$fluid.pm <- ifelse(length$V2 %in% Fluid.up, "Up", ifelse(length$V2 %in% Fluid.down, "Down",ifelse(length$V2 %in% Fluid.SumAdj.PEAKSQ$primary_FBgn, "Not", "Remove")))
+
+length.fluid <- subset(length, length$fluid.pm != "Remove")
+
+length.fluid$fluid.pm <- factor(length.fluid$fluid.pm, levels=c("Down", "Up", "Not"))
+
+ggsave("length.tiff", width=3.2, height=3.2, units="in")
+ggplot(data = length.fluid, aes(x=fluid.pm, y= log(V3,2), fill=fluid.pm))+
+  geom_jitter(alpha=0.2, position=position_jitter(width=.2), size=0.5)+
+  geom_boxplot(outlier.color = NA, alpha=0.5)+
+  scale_fill_manual(values=c("grey25", "mediumpurple3", "grey85"))+
+  theme_classic()+
+  ylab ("Log2 Protein length")+
+  xlab("Differential abundnace")+
+  theme(legend.position = "none")
+
+#there are differences in size
+kruskal.test(V3 ~ fluid.pm, data=length.fluid) # p < 0.001
+
+kruskal.test(V3 ~ fluid.pm, data=subset(length.fluid, length.fluid$fluid.pm != "Not")) # p < 0.001
+# up and down are sig different
+
+kruskal.test(V3 ~ fluid.pm, data=subset(length.fluid, length.fluid$fluid.pm != "Up")) # p = 0.1
+#not and down are not sig different
+
+kruskal.test(V3 ~ fluid.pm, data=subset(length.fluid, length.fluid$fluid.pm != "Down")) # p < 0.001
+#up and not are sig different
+```
+
+Codon bias
+```{r}
+#make conversion names for the different categories of interest
+dmel.names <- subset(dmel.names, dmel.names$polypeptide_ID %in% length$V1)
+
+dmel.names.Fluid.up <- subset(dmel.names, dmel.names$gene_ID %in% Fluid.up)
+dmel.names.Fluid.down <- subset(dmel.names, dmel.names$gene_ID %in% Fluid.down)
+
+Fluid.not <- subset(Fluid.proteins, !(Fluid.proteins %in% Fluid.up))
+Fluid.not <- subset(Fluid.not, !(Fluid.not %in% Fluid.down))
+dmel.names.Fluid.not <- subset(dmel.names, dmel.names$gene_ID %in% Fluid.not)
+
+#calculate codon table of proteins that go up in fluid
+Fluid.up.fasta <- dmel.6.32[c(which(names(dmel.6.32) %in% dmel.names.Fluid.up$polypeptide_symbol))]
+write.fasta(sequences = Fluid.up.fasta, names = names(Fluid.up.fasta), nbchar = 80, file.out = "Fluid.up.fasta")
+Fluid.up.string <- readDNAStringSet("Fluid.up.fasta")
+codon.fluid.up <- codonTable(Fluid.up.string)
+
+#calculate codon table of proteins that go down in fluid
+Fluid.down.fasta <- dmel.6.32[c(which(names(dmel.6.32) %in% dmel.names.Fluid.down$polypeptide_symbol))]
+write.fasta(sequences = Fluid.down.fasta, names = names(Fluid.down.fasta), nbchar = 80, file.out = "Fluid.down.fasta")
+Fluid.down.string <- readDNAStringSet("Fluid.down.fasta")
+codon.fluid.down <- codonTable(Fluid.down.string)
+
+#calculate codon table of proteins that do not change in fluid (potential reference?)
+Fluid.not.fasta <- dmel.6.32[c(which(names(dmel.6.32) %in% dmel.names.Fluid.not$polypeptide_symbol))]
+write.fasta(sequences = Fluid.not.fasta, names = names(Fluid.not.fasta), nbchar = 80, file.out = "Fluid.not.fasta")
+Fluid.not.string <- readDNAStringSet("Fluid.not.fasta")
+codon.fluid.not <- codonTable(Fluid.not.string)
+
+#codon table for longest isoform of all proteins
+all.longest.fasta <- dmel.6.32[c(which(names(dmel.6.32) %in% dmel.names$polypeptide_symbol))]
+write.fasta(sequences = all.longest.fasta, names = names(all.longest.fasta), nbchar = 80, file.out = "all.longest.fasta")
+all.longest.string <- readDNAStringSet("all.longest.fasta")
+codon.all.longest <- codonTable(all.longest.string)
+
+#ENCprime for longest isoform of all proteins
+encprime.up <- ENCprime(codon.fluid.up, self=F, subsets = list(reference = codon.all.longest))
+encprime.down <- ENCprime(codon.fluid.down, self=F, subsets = list(reference = codon.all.longest))
+encprime.not <- ENCprime(codon.fluid.not, self=F, subsets = list(reference = codon.all.longest))
+encprime.all <- data.frame(c(encprime.up, encprime.down, encprime.not))
+colnames(encprime.all) <- "encprime"
+encprime.all$diff <- c(rep("Up", 223), rep("Down", 61), rep("Not", 410))
+
+encprime.all$diff <- factor(encprime.all$diff, levels = c("Down", "Up", "Not"))
+
+ggsave("ENCprime.allbackground.tiff", width=4, height=4, units = "in")
+ggplot(data=encprime.all, aes(x=diff, y=encprime, fill=diff))+
+  geom_jitter(alpha=0.2, position=position_jitter(width=.2), size=0.5)+
+  geom_boxplot(outlier.color = NA, alpha=0.5)+
+  scale_fill_manual(values=c("grey25", "mediumpurple3", "grey85"))+
+  theme_classic()+
+  ylab ("Codon bias (ENC prime)")+
+  xlab("Differential abundnace")+
+  theme(legend.position = "none")
+
+kruskal.test(encprime ~ diff, data = encprime.all) # 0.75
+
+
+
+
+```
+
+Calculate the number of tissue specific genes (tau > 0.75) from each tissue
+```{r}
+#if grouping isn't happening right:
+#detach(package:ggbiplot)
+#detach(package:plyr)
+
+FRT.summary.protein.3$avgFRT <- rowMeans(FRT.summary.protein.3[,c("BURU", "OVDU", "SRU", "STU", "POU", "FBU")])
+FRT.summary.protein.3$avgFRTbias <- FRT.summary.protein.3$avgFRT - FRT.summary.protein.3$WF
+
+FRT.summary.protein.4 <- full_join(FRT.summary.protein.3, Fluid.SumAdj.PEAKSQ, by=c("primary_FBgn"))
+
+FRT.summary.protein.4$fluid.post <- ifelse(FRT.summary.protein.4$primary_FBgn %in% Fluid.up, "up", ifelse(FRT.summary.protein.4$primary_FBgn %in% Fluid.down, "down", ifelse(FRT.summary.protein.4$primary_FBgn %in% Fluid.not, "not", NA)))
+
+FRT.summary.protein.4$fluid.post <- as.factor(FRT.summary.protein.4$fluid.post)
+
+#caclculate protopotion of tissue specific genes among fluid proteins that increase/decrease/don't change
+FRT.Proteins.max <- FRT.summary.protein.4 %>% filter(fluid.post != "NA") %>% filter(tissuemax2 != "NA") %>% filter(tissuemax2 != "WF") %>% group_by(tissuemax2, fluid.post) %>% tally() 
+FRT.Proteins.max <- spread(FRT.Proteins.max, tissuemax2, n)
+FRT.Proteins.max[is.na(FRT.Proteins.max)] <- 0
+FRT.Proteins.max$total <- rowSums(FRT.Proteins.max[,-1])
+FRT.Proteins.max <- gather(FRT.Proteins.max, tissue, count, BUR:ST, factor_key = T)
+FRT.Proteins.max$proportion <- FRT.Proteins.max$count / FRT.Proteins.max$total
+
+#caclculate number of tissue specific proteins for each diff abundant category
+FRT.Proteins.max.spec <- FRT.Proteins.max %>% filter(tissue != "NoMax") %>% group_by(fluid.post) %>% summarise(total = sum(count))
+#add in number of non specific proteins for each category
+FRT.Proteins.max.spec$nomax <- c(35,238, 125)
+#total number of diff abundt proteins in each category (numbers are higher because there are proteins not identified in the transcriptome)
+FRT.Proteins.max.spec$total2 <- c(67, 715-67-241, 241)
+
+#proportion of tissue-spec diff abundant proteins for up or down is not different from not diff abundant
+prop.test(x=35, n= 67, p= 238/407)
+prop.test(x=125, n= 241, p= 238/407)
+
+#test if the proportion of tissue specific genes from individual tissues is different
+#BUR (down, up)
+prop.test(x=5, n= 27, p= 23/146) #0.90
+prop.test(x=15, n= 106, p= 23/146) #0.75
+
+#OVD (down, up)
+prop.test(x=4, n= 27, p= 9/146) #0.15
+prop.test(x=1, n= 106, p= 9/146) #0.04 but not sig with multiple test correction (multiply by 6 for each tissue)
+
+#SR (down, up)
+prop.test(x=2, n= 27, p= 8/146) #1.0
+prop.test(x=1, n= 106, p= 8/146) #0.07
+
+#ST (down, up)
+prop.test(x=3, n= 27, p= 5/146)
+prop.test(x=1, n= 106, p= 5/146)
+
+#PO (down, up)
+prop.test(x=0, n= 27, p= 4/146) #0.1
+prop.test(x=0, n= 106, p= 4/146) #0.26
+
+#FB (down, up)
+prop.test(x=13, n= 27, p= 97/146)#0.07
+prop.test(x=88, n= 106, p= 97/146) #0.0004
+0.0004443 * 6
+
+#visualize number of tissue specific genes (including no-max)
+FRT.Proteins.max$tissue <- factor(FRT.Proteins.max$tissue, levels=rev(c("NoMax", "FB", "BUR", "OVD", "SR", "ST", "PO")))
+
+FRT.Proteins.max$fluid.post <- factor(FRT.Proteins.max$fluid.post, levels=c("down", "up", "not"))
+
+ggplot(data= FRT.Proteins.max, aes(fill= tissue, y=count, x= fluid.post))+
+  geom_bar(position = "stack", stat="identity", color="black") + 
+  scale_fill_manual(values = rev(c("white", fb.col, bur.col, ovd.col, sr.col, st.col, po.col)))+
+  xlab("Protein Identification") +
+  ylab("Max tissue expression (tau > 0.75)")+
+  theme_classic()+
+  theme(legend.position = "none")
+
+#visualize number of FRT tissue specific genes only
+FRT.Proteins.max <- FRT.summary.protein.4 %>% filter(fluid.post != "NA") %>% filter(tissuemax2 != "NA") %>% filter(tissuemax2 != "WF") %>% filter(tissuemax2 != "NoMax") %>% group_by(tissuemax2, fluid.post) %>% tally() 
+FRT.Proteins.max <- spread(FRT.Proteins.max, tissuemax2, n)
+FRT.Proteins.max[is.na(FRT.Proteins.max)] <- 0
+FRT.Proteins.max$total <- rowSums(FRT.Proteins.max[,-1])
+FRT.Proteins.max <- gather(FRT.Proteins.max, tissue, count, BUR:ST, factor_key = T)
+FRT.Proteins.max$proportion <- FRT.Proteins.max$count / FRT.Proteins.max$total
+
+
+FRT.Proteins.max$tissue <- factor(FRT.Proteins.max$tissue, levels=rev(c("FB", "BUR", "OVD", "SR", "ST", "PO")))
+FRT.Proteins.max$fluid.post <- factor(FRT.Proteins.max$fluid.post, levels=c("down", "up", "not"))
+
+tiff('fluidpost.Tau75.tiff', units="in", width=3, height=3, res=300)
+ggplot(data= FRT.Proteins.max, aes(fill= tissue, color=fluid.post, y=count, x= fluid.post))+
+  geom_bar(position = "stack", stat="identity", size=0.25) + 
+  scale_fill_manual(values = rev(c(fb.col, bur.col, ovd.col, sr.col, st.col, po.col)))+
+  scale_color_manual(values=c("grey25", "mediumpurple", "grey75"))+
+  xlab("Differential Abundance") +
+  ylab("Max tissue expression (tau > 0.75)")+
+  theme_classic()+
+  theme(legend.position = "none")
+#dev.off()
+```
+
+
+Compare to RNAseq data
+```{r}
+FRT.SumFRT <- left_join(FRT.SumAdj.PEAKSQ, Sum.Avg.FRT, by= c("primary_FBgn" = "FBgn"))
+Fluid.SumFRT <- left_join(Fluid.SumAdj.PEAKSQ, Sum.Avg.FRT, by= c("primary_FBgn" = "FBgn"))
+
+#tiff('PostmatingCorrelation.tissue.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = FRT.SumFRT, aes(x=Log2FC, y=DE))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col="red")+
+  geom_hline(yintercept = 0, lty = 1, col = "chartreuse3")+
+  geom_vline(xintercept = 0, lty = 1, col = "chartreuse3")+
+  theme_classic()
+#dev.off()
+
+round(summary(lm(Log2FC ~ DE, data=FRT.SumFRT))$r.squared, 2) #0
+lmp(lm(Log2FC ~ DE, data=FRT.SumFRT)) # 0.69
+
+cor.test(FRT.SumFRT$Log2FC, FRT.SumFRT$DE, method="spearman")
+
+#tiff('PostmatingCorrelation.fluid.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.SumFRT, aes(x=Log2FC, y=DE))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col="red")+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  theme_classic()
+#dev.off()
+
+round(summary(lm(Log2FC ~ DE, data=Fluid.SumFRT))$r.squared, 2) #0
+lmp(lm(Log2FC ~ DE, data=Fluid.SumFRT)) # 0.08
+
+cor.test(Fluid.SumFRT$Log2FC, Fluid.SumFRT$DE, method="spearman")
+
+```
+
+Compare fluid to each tissue individually
+```{r}
+Sum.Avg.FRTpost <- Avg.CPM
+Sum.Avg.FRTpost$FBgn <- row.names(Sum.Avg.FRTpost)
+Sum.Avg.FRTpost$BUR.Log2FC.6U <- log(Sum.Avg.FRTpost$BUR6 / Sum.Avg.FRTpost$BURU, 2)
+Sum.Avg.FRTpost$OVD.Log2FC.6U <- log(Sum.Avg.FRTpost$OVD6 / Sum.Avg.FRTpost$OVDU, 2)
+Sum.Avg.FRTpost$SR.Log2FC.6U <- log(Sum.Avg.FRTpost$SR6 / Sum.Avg.FRTpost$SRU, 2)
+Sum.Avg.FRTpost$ST.Log2FC.6U <- log(Sum.Avg.FRTpost$ST6 / Sum.Avg.FRTpost$STU, 2)
+Sum.Avg.FRTpost$PO.Log2FC.6U <- log(Sum.Avg.FRTpost$PO6 / Sum.Avg.FRTpost$POU, 2)
+Sum.Avg.FRTpost$FB.Log2FC.6U <- log(Sum.Avg.FRTpost$FB6 / Sum.Avg.FRTpost$FBU, 2)
+
+Sum.Avg.FRTpost[sapply(Sum.Avg.FRTpost, is.infinite)] <- NA
+Sum.Avg.FRTpost[sapply(Sum.Avg.FRTpost, is.nan)] <- NA
+
+Sum.Avg.FRTpost$avg <- rowMeans(Sum.Avg.FRTpost[,c(21:25)], na.rm = T)
+Sum.Avg.FRTpost$avg2 <- rowMeans(Sum.Avg.FRTpost[,c(21:26)], na.rm = T)
+
+Fluid.Sum.Avg.FRTpost <- left_join(Fluid.SumAdj.PEAKSQ, Sum.Avg.FRTpost, by=c("primary_FBgn" = "FBgn"))
+
+#tiff('PostmatingCorrelation.fluid.AVG.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=avg))+
+    geom_hline(yintercept = 0, lty = 2, col = "black")+
+  geom_vline(xintercept = 0, lty = 2, col = "black")+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col="mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("Avg FRT tissue Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+#tiff('PostmatingCorrelation.fluid.AVG.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=avg2))+
+    geom_hline(yintercept = 0, lty = 2, col = "black")+
+  geom_vline(xintercept = 0, lty = 2, col = "black")+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col="mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("Avg FRT tissue Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+
+#tiff('PostmatingCorrelation.fluid.BUR.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=BUR.Log2FC.6U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col=bur.col)+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("BUR Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+#tiff('PostmatingCorrelation.fluid.OVD.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=OVD.Log2FC.6U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col=ovd.col)+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("OVD Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+#tiff('PostmatingCorrelation.fluid.SR.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=SR.Log2FC.6U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col=sr.col)+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("SR Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+#tiff('PostmatingCorrelation.fluid.ST.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=ST.Log2FC.6U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col=st.col)+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("ST Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+#tiff('PostmatingCorrelation.fluid.PO.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=PO.Log2FC.6U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col=po.col)+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("PO Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+#tiff('PostmatingCorrelation.fluid.FB.tiff', units="in", width=5, height=5, res=300)
+ggplot(data = Fluid.Sum.Avg.FRTpost, aes(x=Log2FC, y=FB.Log2FC.6U))+
+  geom_point(size = 1, alpha = 0.65, col = "grey25")+
+  geom_smooth(method=lm, se=T, col=fb.col)+
+  geom_hline(yintercept = 0, lty = 1, col = "mediumpurple3")+
+  geom_vline(xintercept = 0, lty = 1, col = "mediumpurple3")+
+  xlab("Fluid Post Mating Differential Abundance") +
+  ylab("FB Postmating (6hr - Un) Differential Expression")+
+  theme_classic()
+
+Fluid.Sum.Avg.FRTpost$FB.Log2FC.6U[mapply(is.infinite, Fluid.Sum.Avg.FRTpost$FB.Log2FC.6U)] <- NA
+
+summary(lm(Log2FC ~ BUR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))
+round(summary(lm(Log2FC ~ BUR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2) #0.02
+lmp(lm(Log2FC ~ BUR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost)) # p<0.001
+lmp(lm(Log2FC ~ BUR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))*6 #0.0002
+
+summary(lm(Log2FC ~ OVD.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))
+round(summary(lm(Log2FC ~ OVD.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2) #0.04
+lmp(lm(Log2FC ~ OVD.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost)) # p<0.001
+lmp(lm(Log2FC ~ OVD.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))*6 # p<0.001
+
+summary(lm(Log2FC ~ SR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))
+round(summary(lm(Log2FC ~ SR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2) #0
+lmp(lm(Log2FC ~ SR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost)) # p = 0.9
+
+summary(lm(Log2FC ~ ST.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))
+round(summary(lm(Log2FC ~ ST.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2) #0
+lmp(lm(Log2FC ~ ST.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost)) # p = 0.8
+
+summary(lm(Log2FC ~ PO.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))
+round(summary(lm(Log2FC ~ PO.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2) #0.03
+lmp(lm(Log2FC ~ PO.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost)) # p<0.001
+lmp(lm(Log2FC ~ PO.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))*6 # p<0.001
+
+summary(lm(Log2FC ~ FB.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))
+round(summary(lm(Log2FC ~ FB.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2) #0.02
+lmp(lm(Log2FC ~ FB.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost)) # p<0.001
+lmp(lm(Log2FC ~ FB.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))*6 # p=0.003
+
+mean(c(round(summary(lm(Log2FC ~ BUR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2), round(summary(lm(Log2FC ~ OVD.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ SR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ ST.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ PO.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ FB.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2)))
+
+st.err(c(round(summary(lm(Log2FC ~ BUR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2), round(summary(lm(Log2FC ~ OVD.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ SR.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ ST.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ PO.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2),round(summary(lm(Log2FC ~ FB.Log2FC.6U, data=Fluid.Sum.Avg.FRTpost))$r.squared, 2)))
+
+cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$BUR.Log2FC.6U, method="spearman") #0.22
+cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$OVD.Log2FC.6U, method="spearman") #0.28
+cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$SR.Log2FC.6U, method="spearman") # -0.01 not sig
+cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$ST.Log2FC.6U, method="spearman") # -0.02 not sig
+cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$PO.Log2FC.6U, method="spearman") # 0.27
+cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$FB.Log2FC.6U, method="spearman") # -0.16
+
+mean(c(cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$BUR.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$OVD.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$SR.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$ST.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$PO.Log2FC.6U, method="spearman")$estimate))#0.15
+
+st.err(c(cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$BUR.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$OVD.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$SR.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$ST.Log2FC.6U, method="spearman")$estimate, cor.test(Fluid.Sum.Avg.FRTpost$Log2FC, Fluid.Sum.Avg.FRTpost$PO.Log2FC.6U, method="spearman")$estimate))#0.06
+
+```
+
