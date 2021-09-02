@@ -1,11 +1,9 @@
-# FRT.TissueFluid.Proteome
+# FRT Tissue and Fluid Proteome
 
-Analysis for "Female reproductive tract gene expression reveals tissue-specific rapid molecular evolution and coordinated mating responses in Drosophila" to be published in G3
+Analysis for "Pronounced postmating response in the Drosophila female reproductive tract fluid proteome" to be published in Molecular and Cellular Proteomics
 
-In order to better understand the female reproductive tract (FRT) we conducted a systematic, comprehensive investigation of the FRT in a tssue-specific manner at three time points relative to mating. By characterizing the transcriptional relationships among discrete FRT tissues across time we advance the understanding of the molecular genetics of FRT functions. We conducted RNAseq of five FRT tissues (bursa, oviduct, seminal receeptacle, spermatheca, and parovaria) as well as the FRT-associated fat body in unmated females as well as females 6hrs and 24hrs post-mating.
+In order to better understand the female reproductive tract (FRT) we conducted proteomic analysis of the FRT tissue and extracellular luminal fluid from unmated females and females 6 hrs postmating. Our results provide new insights into the composition of the FRT environment and how it responds to mating. In particular, we found that (1) the fluid is a specific subset of FRT proteins likely generated through holocrine and apocrine secretion as well as exocrine secretion (2) the fluid has greater abundance of proteins involved in metabolic functions which may support the survival of sperm in storage (3) the tightly associated FRT fat body likely substatively contributes to the FRT fluid and (4) that the changes in the fluid after mating are much more dramatic than the tissue and not correlated with the tissue. The analyses here indicate the importance of directly investigating the fluid of the FRT in order to better understand the potential for ejaculate-female interactions that shape reproductive outcomes.
 
-Raw data is available from GEO accession GSE143759
+Raw data is available from the ProteomeXchange Consortium via the PRIDE partner repository with the dataset identifier PXD025085
 
-Other data neccesary for analyses - gene length, name conversion, chromosome and position, molecular evolution, and ModEncode expression.
-
-This repository includes all data and code necessary to replicate the analyses reproted in the manuscript. The code is found in "FRT.Transcriptomics.Analysis.Submitted.rmd" and the raw data is "FRT.Clean.txt". The normalized data set is included as "FRT.normalized.txt" and the supplemental table 1 outputs with average expression for each sample "Supp1.AvgExpression.txt" and summary of all anlayses "Supp1.summary.txt". For any qestions contact Caitlin at mcdonouce@gmail.com
+This repository includes all data (with the exception of large files that need to be downloaded from flybase, indicated in the R file) and code necessary to replicate the analyses reported in the manuscript. The code is found in "FRT.Tissue.Fluid_2020_Revised.Rmd". All proteomic data can be found in the ProteomeData file and any other associated datasets used in the analysis can be found in the AssociatedData folder. Supplementary files generated in the anaysis can be found in the SuppFiles folder. For any qestions contact Caitlin at mcdonouce@gmail.com
